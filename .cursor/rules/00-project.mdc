@@ -1,0 +1,12 @@
+---
+description: Project scope, source of truth, phase gate, and workspace safety
+alwaysApply: true
+---
+Read AGENTS.md, START_HERE.md, IMPLEMENTATION_PLAN.md, docs/service-status.md, and docs/verification.md.
+This is a prepared local starter. Extend it in place; do not create a nested project or regenerate the catalog.
+Phase 1 is complete. The active path is React to API gateway to the owning domain service; storefront-backend and admin-portal-backend are removed. Do not recreate that scaffold or restart Phase 1.
+Use MASTER_PROMPT.md for detailed design. Latest explicit user instructions override older scope statements.
+Preserve unrelated work and original projects. Do not delete volumes or commit local secrets.
+Use WSL2 with Java 21 and project Maven Wrapper. Report commands actually run and blockers.
+Local tooling is the root Makefile plus Bash scripts under scripts/local calling mvnw, npm, docker compose, jq, openssl, curl. Add new tasks as Makefile targets with `##` help text.
+Never introduce Python (scripts, venvs, pip, or docs instructions) as a project dependency for setup, run, test, or validation.

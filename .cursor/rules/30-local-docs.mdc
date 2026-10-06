@@ -1,0 +1,13 @@
+---
+description: Local infrastructure isolation and documentation verification
+globs: "infrastructure/**,scripts/**,docs/**,Makefile,**/README.md"
+alwaysApply: false
+---
+Use project-scoped Compose volumes/networks and loopback published ports. No external project database reuse.
+Never delete state or use Docker prune. PostgreSQL init and Keycloak import are first-boot only; changes require controlled migrations/reconciliation.
+Local tooling: Makefile targets wrap mvnw, npm, docker compose, or short Bash scripts in scripts/local. Scripts use `set -euo pipefail`, must pass `bash -n`, never print secrets, and never overwrite .env or .local/ silently. No Python.
+Keep `make help` descriptions accurate to the exact Maven/npm goal they run (test vs verify). Avoid duplicate work across aggregate targets.
+Update docs/service-status.md, docs/progress.md, docs/verification.md and affected local guide after changes; keep docs/local-development.md command tables in sync with the Makefile.
+Distinguish source implemented, static checked, tests passed, runtime verified, blocked, and planned.
+Document exact commands and expected observations, not imagined evidence.
+Do not disable TLS/JWT validation or authentication to make a smoke test succeed.

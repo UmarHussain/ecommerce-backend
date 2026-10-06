@@ -1,0 +1,12 @@
+---
+description: Java service boundaries, security, transactions, and reliable events
+globs: "backend/**/*.java,backend/**/pom.xml,backend/**/*.yml"
+alwaysApply: false
+---
+Domain rules remain in owning services. The gateway only routes, rewrites paths, validates tokens, applies coarse checks, CORS, rate limits, and correlation headers. Database per service, no cross-database SQL or shared JPA model.
+JWT: signature, issuer, expiry, audience, access-token type. Explicit client-role allowlists map to PERM_ authorities; scopes are not automatically client roles.
+Deny unknown endpoints. Require permission and resource ownership. Keep @EnableMethodSecurity enabled. Never trust user/role headers.
+Only user-service's infrastructure adapter may call Keycloak Admin REST. Least privilege, no realm-admin shortcut, no stored passwords.
+No remote calls inside long database transactions. PostgreSQL and Keycloak need durable reconciliation, not a pretend global @Transactional.
+Later Kafka consumers require unique inbox keys committed with business changes; publish through transactional outbox. No exists-then-act dedupe.
+Use meaningful security, concurrency, and failure recovery tests; never mark Testcontainers tests passed if Docker was unavailable.

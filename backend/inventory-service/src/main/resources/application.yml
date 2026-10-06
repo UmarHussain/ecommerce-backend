@@ -1,0 +1,20 @@
+server:
+  port: ${SERVER_PORT:8095}
+spring:
+  application:
+    name: inventory-service
+platform:
+  security:
+    issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8180/realms/ecommerce-local}
+    jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8180/realms/ecommerce-local/protocol/openid-connect/certs}
+    audience: inventory-service
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never

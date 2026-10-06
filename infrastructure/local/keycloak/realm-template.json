@@ -1,0 +1,781 @@
+{
+  "realm": "ecommerce-local",
+  "enabled": true,
+  "displayName": "Ecommerce Local Platform",
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "verifyEmail": false,
+  "accessTokenLifespan": 300,
+  "defaultRole": {
+    "name": "default-roles-ecommerce-local"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "CUSTOMER",
+        "composite": true,
+        "composites": {
+          "client": {
+            "user-service": [
+              "profile.read_own",
+              "profile.update_own"
+            ],
+            "cart-service": [
+              "cart.read_own",
+              "cart.write_own"
+            ],
+            "order-service": [
+              "order.create",
+              "order.read_own",
+              "order.cancel_own"
+            ]
+          }
+        }
+      },
+      {
+        "name": "CATALOG_VIEWER",
+        "composite": true,
+        "composites": {
+          "client": {
+            "api-gateway": [
+              "admin.access"
+            ],
+            "catalog-service": [
+              "catalog.read"
+            ]
+          }
+        }
+      },
+      {
+        "name": "CATALOG_CREATOR",
+        "composite": true,
+        "composites": {
+          "client": {
+            "api-gateway": [
+              "admin.access"
+            ],
+            "catalog-service": [
+              "catalog.read",
+              "catalog.create"
+            ]
+          }
+        }
+      },
+      {
+        "name": "CATALOG_EDITOR",
+        "composite": true,
+        "composites": {
+          "client": {
+            "api-gateway": [
+              "admin.access"
+            ],
+            "catalog-service": [
+              "catalog.read",
+              "catalog.update",
+              "catalog.activate"
+            ]
+          }
+        }
+      },
+      {
+        "name": "INVENTORY_MANAGER",
+        "composite": true,
+        "composites": {
+          "client": {
+            "api-gateway": [
+              "admin.access"
+            ],
+            "catalog-service": [
+              "catalog.read"
+            ],
+            "inventory-service": [
+              "inventory.read",
+              "inventory.adjust"
+            ]
+          }
+        }
+      },
+      {
+        "name": "ORDER_MANAGER",
+        "composite": true,
+        "composites": {
+          "client": {
+            "api-gateway": [
+              "admin.access"
+            ],
+            "order-service": [
+              "order.read_all",
+              "order.process",
+              "order.dispatch",
+              "order.deliver",
+              "order.cancel_any"
+            ]
+          }
+        }
+      },
+      {
+        "name": "USER_ADMIN",
+        "composite": true,
+        "composites": {
+          "client": {
+            "api-gateway": [
+              "admin.access"
+            ],
+            "user-service": [
+              "user.read",
+              "user.create",
+              "user.update",
+              "user.manage_staff",
+              "role.read",
+              "role.assign"
+            ]
+          }
+        }
+      },
+      {
+        "name": "PLATFORM_ADMIN",
+        "composite": true,
+        "composites": {
+          "client": {
+            "api-gateway": [
+              "admin.access"
+            ],
+            "user-service": [
+              "user.read",
+              "user.create",
+              "user.update",
+              "user.manage_staff",
+              "user.disable_identity",
+              "role.read",
+              "role.assign",
+              "role.manage"
+            ],
+            "catalog-service": [
+              "catalog.read",
+              "catalog.create",
+              "catalog.update",
+              "catalog.activate"
+            ],
+            "inventory-service": [
+              "inventory.read",
+              "inventory.adjust"
+            ],
+            "order-service": [
+              "order.read_all",
+              "order.process",
+              "order.dispatch",
+              "order.deliver",
+              "order.cancel_any"
+            ]
+          }
+        }
+      },
+      {
+        "name": "default-roles-ecommerce-local",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "CUSTOMER"
+          ]
+        }
+      }
+    ],
+    "client": {
+      "api-gateway": [
+        {
+          "name": "admin.access"
+        }
+      ],
+      "user-service": [
+        {
+          "name": "profile.read_own"
+        },
+        {
+          "name": "profile.update_own"
+        },
+        {
+          "name": "user.read"
+        },
+        {
+          "name": "user.create"
+        },
+        {
+          "name": "user.update"
+        },
+        {
+          "name": "user.manage_staff"
+        },
+        {
+          "name": "user.disable_identity"
+        },
+        {
+          "name": "role.read"
+        },
+        {
+          "name": "role.assign"
+        },
+        {
+          "name": "role.manage"
+        }
+      ],
+      "catalog-service": [
+        {
+          "name": "catalog.read"
+        },
+        {
+          "name": "catalog.create"
+        },
+        {
+          "name": "catalog.update"
+        },
+        {
+          "name": "catalog.activate"
+        }
+      ],
+      "inventory-service": [
+        {
+          "name": "inventory.read"
+        },
+        {
+          "name": "inventory.adjust"
+        }
+      ],
+      "cart-service": [
+        {
+          "name": "cart.read_own"
+        },
+        {
+          "name": "cart.write_own"
+        }
+      ],
+      "order-service": [
+        {
+          "name": "order.create"
+        },
+        {
+          "name": "order.read_own"
+        },
+        {
+          "name": "order.cancel_own"
+        },
+        {
+          "name": "order.read_all"
+        },
+        {
+          "name": "order.process"
+        },
+        {
+          "name": "order.dispatch"
+        },
+        {
+          "name": "order.deliver"
+        },
+        {
+          "name": "order.cancel_any"
+        }
+      ]
+    }
+  },
+  "clients": [
+    {
+      "clientId": "api-gateway",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "user-service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "catalog-service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "inventory-service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "cart-service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "order-service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "storefront-spa",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": [
+        "http://localhost:5173/callback",
+        "http://localhost:5173/silent-renew.html"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "roles",
+        "profile",
+        "email",
+        "web-origins"
+      ],
+      "optionalClientScopes": [],
+      "protocolMappers": [
+        {
+          "name": "aud-api-gateway",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "api-gateway",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-user-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "user-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-catalog-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "catalog-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-inventory-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "inventory-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-cart-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "cart-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-order-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "order-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "admin-spa",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": [
+        "http://localhost:5174/callback",
+        "http://localhost:5174/silent-renew.html"
+      ],
+      "webOrigins": [
+        "http://localhost:5174"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5174/"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "roles",
+        "profile",
+        "email",
+        "web-origins"
+      ],
+      "optionalClientScopes": [],
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "name": "aud-api-gateway",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "api-gateway",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-user-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "user-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-catalog-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "catalog-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-inventory-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "inventory-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-order-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "order-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "user-service-admin",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "__USER_SERVICE_ADMIN_SECRET__",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "basic"
+      ],
+      "optionalClientScopes": []
+    }
+  ],
+  "clientScopeMappings": {
+    "realm-management": [
+      {
+        "client": "user-service-admin",
+        "roles": [
+          "manage-users",
+          "view-users",
+          "query-clients",
+          "view-clients",
+          "view-realm"
+        ]
+      }
+    ]
+  },
+  "scopeMappings": [
+    {
+      "client": "storefront-spa",
+      "roles": [
+        "CUSTOMER"
+      ]
+    },
+    {
+      "client": "admin-spa",
+      "roles": [
+        "CUSTOMER",
+        "CATALOG_VIEWER",
+        "CATALOG_CREATOR",
+        "CATALOG_EDITOR",
+        "INVENTORY_MANAGER",
+        "ORDER_MANAGER",
+        "USER_ADMIN",
+        "PLATFORM_ADMIN"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-user-service-admin",
+      "serviceAccountClientId": "user-service-admin",
+      "enabled": true,
+      "realmRoles": [],
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-clients",
+          "view-clients",
+          "view-realm"
+        ]
+      }
+    },
+    {
+      "username": "customer@example.test",
+      "email": "customer@example.test",
+      "firstName": "customer",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "CUSTOMER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "catalog-creator@example.test",
+      "email": "catalog-creator@example.test",
+      "firstName": "catalog-creator",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "CATALOG_CREATOR"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "catalog-editor@example.test",
+      "email": "catalog-editor@example.test",
+      "firstName": "catalog-editor",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "CATALOG_EDITOR"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "inventory-manager@example.test",
+      "email": "inventory-manager@example.test",
+      "firstName": "inventory-manager",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "INVENTORY_MANAGER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "user-admin@example.test",
+      "email": "user-admin@example.test",
+      "firstName": "user-admin",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "USER_ADMIN"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "platform-admin@example.test",
+      "email": "platform-admin@example.test",
+      "firstName": "platform-admin",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "PLATFORM_ADMIN"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "dual-role@example.test",
+      "email": "dual-role@example.test",
+      "firstName": "dual-role",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "CUSTOMER",
+        "CATALOG_CREATOR"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "customer-two@example.test",
+      "email": "customer-two@example.test",
+      "firstName": "customer-two",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "CUSTOMER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "catalog-viewer@example.test",
+      "email": "catalog-viewer@example.test",
+      "firstName": "catalog-viewer",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "CATALOG_VIEWER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "catalog-manager@example.test",
+      "email": "catalog-manager@example.test",
+      "firstName": "catalog-manager",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "CATALOG_CREATOR",
+        "CATALOG_EDITOR"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "order-manager@example.test",
+      "email": "order-manager@example.test",
+      "firstName": "order-manager",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "ORDER_MANAGER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

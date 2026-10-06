@@ -1,0 +1,11 @@
+---
+description: Frontend OIDC, permissions, and truthful user flows
+globs: "frontend/**/*.tsx,frontend/**/*.ts,frontend/**/package.json"
+alwaysApply: false
+---
+Separate storefront/admin clients; Authorization Code + PKCE S256 with a maintained OIDC library.
+Tokens in memory, not localStorage. Never ship secrets or call Keycloak Admin REST from the browser.
+UI permissions improve UX; backend authorization remains mandatory. Customer ownership comes from token identity.
+Use actual APIs. Do not show fake success or claim unimplemented workflows work. Handle 401/403/409/unavailable states.
+Keep admin and storefront dev origins/ports and callback paths aligned with Keycloak configuration.
+Run relevant component tests and production builds; Phase 1 requires real browser login tests.

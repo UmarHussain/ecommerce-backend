@@ -1,0 +1,38 @@
+# Infrastructure-only Compose file for manual/IDE development:
+# PostgreSQL, Keycloak, Redis, Kafka. No application containers.
+#
+# Every service is `extends`-ed from ../compose.yaml and this file uses the SAME
+# project name, service names, and volume names. Docker Compose therefore treats
+# the containers as shared: whichever file started them, the other file (and
+# `make infra-up`) sees them as already running and does not start duplicates.
+#
+# Run from the repository root so --env-file .env resolves:
+#   docker compose --env-file .env -f infrastructure/local/manual-startup/compose.yaml up -d
+# or use infrastructure/local/manual-startup/infra.sh (up|down|status|logs).
+name: ecommerce-local-platform
+services:
+  postgres:
+    extends:
+      file: ../compose.yaml
+      service: postgres
+  keycloak:
+    extends:
+      file: ../compose.yaml
+      service: keycloak
+    depends_on: # extends does not inherit depends_on
+      postgres:
+        condition: service_healthy
+  redis:
+    extends:
+      file: ../compose.yaml
+      service: redis
+    profiles: !reset []  # always start here (the main file keeps it behind --profile cache)
+  kafka:
+    extends:
+      file: ../compose.yaml
+      service: kafka
+    profiles: !reset []  # always start here (the main file keeps it behind --profile events)
+volumes:
+  postgres-data: {}
+  redis-data: {}
+  kafka-data: {}
