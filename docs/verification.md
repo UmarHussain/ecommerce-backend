@@ -105,10 +105,43 @@ Executed from `/mnt/d/GitHub/ecommerce-local-platform` in WSL2 (Java 21.0.12.1, 
 
 Not executed: `make apps-up`. A live connection-refused catalog outage was not produced; the gateway unit test maps `ConnectException` to 503, and `GatewayUnavailableTest` expects 504 `GATEWAY_DOWNSTREAM_TIMEOUT` for `127.0.0.1:1` on this host.
 
+## 2026-10-08 — Phase 3 inventory
+
+Executed from `/mnt/d/GitHub/ecommerce-local-platform` in WSL2 (Java 21.0.12.1). Node/npm are the frontend workspace already used for Phase 2. No volumes were deleted and no passwords were reset or printed.
+
+- `make check`: passed, including `bash -n` on `scripts/local/inventory-check.sh` and Markdown links.
+- `make frontend-test`: the first run failed one admin assertion because `INBOUND_RECEIPT` appears both as a reason option and a history cell. The test now looks for that history cell. The rerun passed: storefront 4, admin 16 (inventory screens 5).
+- `make frontend-build`: both production builds passed.
+- `./mvnw -B -pl inventory-service verify`: the first Failsafe run failed schema validation because `request_fingerprint` was `CHAR(64)` and Hibernate expected `varchar(64)`. The migration column is `VARCHAR(64)`. The rerun passed: Surefire 12, `InventoryPostgresIT` 11 on Testcontainers PostgreSQL 17.6.
+- `./mvnw -B verify` (all six modules): BUILD SUCCESS. Surefire: api-gateway 15, user-service 24, catalog-service 29, inventory-service 12, cart-service 1, order-service 1. Failsafe: `UserServiceKeycloakIT` 0 (admin secret not in that JVM), `UserServicePostgresIT` 1, `CatalogPostgresIT` 12, `InventoryPostgresIT` 11.
+- Infrastructure: the first `make infra-up` in this session started Postgres and Keycloak and both received a fast shutdown about 15 seconds later (Postgres exit 0, Keycloak 143). A later `make infra-up` stayed up. WSL then returned `Wsl/Service/E_UNEXPECTED`; `wsl --shutdown` recovered the service and stopped containers without deleting volumes. Another `make infra-up` stayed up, and port 55432 accepted connections from WSL.
+- Source processes: user-service 8093, catalog-service 8094, inventory-service 8095, api-gateway 8090, admin-web 5174. The first inventory start failed with connection refused on 55432 while Postgres was down. After the stable `infra-up`, all four services started.
+- `make smoke`: passed.
+- `make security-check`: passed. `catalog-viewer@example.test` still has realm roles `CATALOG_EDITOR,CATALOG_VIEWER` before and after re-login. This run did not remove that role and did not reset the user.
+- `make catalog-check`: passed.
+- `make inventory-check`: passed. It reconciled `inventory-reader@example.test` without resetting passwords. Reader GET 200 and POST 403; catalog-only, customer, and storefront dual-role GET 403; manager setup stored the catalog SKU rather than the forged body SKU; same-key replay and a changed payload conflict behaved as specified; a second key for the same variant was `INVENTORY_VARIANT_ALREADY_STOCKED`; receipt replay, stale `expectedVersion`, reader history, inactive setup `INVENTORY_CATALOG_INACTIVE`, and a missing stock `404` that echoed `X-Correlation-ID` passed.
+- Browser at `http://localhost:5174` as `inventory-manager@example.test`: set up Wireless Headphones black (`HEADPHONES-BLK`) with opening on-hand 4. History showed `OPENING_BALANCE` (4 from 0) at version 0. A second signed-in tab loaded the same stock at version 0. The first tab recorded an inbound receipt of 2 (on hand 6, version 1, history `INBOUND_RECEIPT` then opening). The second tab submitted a correction of -1 and kept that draft, showing "Stock changed since it was loaded" and Reload and review. After reload, the same correction applied: on hand 5, version 2, history `CORRECTION`, `INBOUND_RECEIPT`, `OPENING_BALANCE`.
+
+Not executed: `make apps-up`. Reservations, cart, checkout, payment, Redis, and Kafka were not implemented.
+
+## 2026-10-09 — Inventory transaction boundary
+
+Executed from `/mnt/d/GitHub/ecommerce-local-platform` in WSL2 (Java 21.0.12.1). No volumes were deleted and no secrets were printed. The refactor keeps the stock rules and HTTP contracts. `StockCommandService.setup()` and `adjust()` are `Propagation.NEVER`. `StockTransactionService.writeSetup`, `writeAdjustment`, and `recordSetupConflict` are `Propagation.REQUIRED` and are called through the Spring bean.
+
+- `make check`: passed.
+- `./mvnw -B -pl inventory-service verify`: the first Failsafe run failed `InventoryPostgresIT.catalogLookupRunsWithNoActiveTransaction` because the assertion counted `CatalogLookupPort.load()` calls as two. One `load()` performs the variant request and the product request. The assertion now expects one `load()` and two catalog HTTP hits. The rerun passed: Surefire 12, `InventoryPostgresIT` 22 on Testcontainers PostgreSQL 17.6.
+- `make backend-verify` (`./mvnw -B verify`): BUILD SUCCESS. Surefire: api-gateway 15, user-service 24, catalog-service 29, inventory-service 12, cart-service 1, order-service 1. Failsafe: `UserServiceKeycloakIT` 0 (admin secret not in that JVM), `UserServicePostgresIT` 1, `CatalogPostgresIT` 12, `InventoryPostgresIT` 22.
+- The inventory-service process that had been listening on 8095 was stopped and started again with `make run-service SERVICE=inventory-service`. `/actuator/health` returned `UP`. Gateway 8090, user-service 8093, and catalog-service 8094 were already listening and were left running.
+- `make inventory-check`: passed. Reader fixture, PKCE tokens, permission boundaries, setup replay, adjustments and history, and the inactive-catalog policy all passed. Tokens were not printed.
+
+`InventoryPostgresIT` covers atomic setup and adjustment commits, an injected adjustment-insert failure that rolls stock, history, and the command back, same-key setup and adjustment recovery after the failed insert rolls back, SKU and variant uniqueness conflicts stored in a later transaction and replayed, stored stale-version and missing-stock results, lock timeout `INVENTORY_COMMAND_IN_PROGRESS` with the command rolled back, catalog `load()` with no active transaction, writer inserts inside a transaction that is committed before return, a joined writer transaction that is not visible to another connection, and `Propagation.NEVER` rejecting `setup()` and `adjust()` when a transaction is already active.
+
+Not executed: `make apps-up`. Reservations, cart, checkout, payment, Redis, and Kafka were not implemented.
+
 ## Still required
 
-- `make apps-up` + `make smoke` in container mode (source-run path is what was verified, including the 2026-10-05 refactor and the 2026-10-08 catalog checks).
-- Phase 3 inventory. Do not treat the catalog-viewer account as a pure viewer until `CATALOG_EDITOR` is removed from it in Keycloak.
+- `make apps-up` + `make smoke` in container mode (source-run path is what was verified, including the 2026-10-08 inventory checks and the 2026-10-09 `make inventory-check`).
+- Do not treat the catalog-viewer account as a pure viewer until `CATALOG_EDITOR` is removed from it in Keycloak. Inventory read denial uses `inventory-reader@example.test`.
 
 ## Verification limits
 

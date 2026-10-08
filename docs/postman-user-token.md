@@ -294,6 +294,16 @@ Sign in with `admin-spa` as `catalog-viewer@example.test`, `catalog-creator@exam
 
 A second PUT that reuses the old `expectedVersion` returns `409` and `CATALOG_STALE_VERSION`. Full route and error list: [contracts/README.md](contracts/README.md) and [phase-2.md](phase-2.md).
 
+## Inventory calls
+
+Sign in with `admin-spa` as `inventory-manager@example.test`. Send `Idempotency-Key` on both writes. `make inventory-check` is the scripted form of this sequence and does not print the token.
+
+- `GET http://localhost:8090/api/v1/admin/inventory/stock-items`
+- `POST http://localhost:8090/api/v1/admin/inventory/stock-items` with `catalogVariantId`, `initialOnHand`, and `reason` `OPENING_BALANCE`
+- `POST http://localhost:8090/api/v1/admin/inventory/stock-items/{id}/adjustments` with `delta`, `reason`, and `expectedVersion` from the stock GET
+
+A second adjustment that reuses the old `expectedVersion` returns `409` and `INVENTORY_STALE_VERSION`. Repeating the first POST with the same key and body returns the original `201`. `inventory-reader@example.test` can GET and receives `403` on POST. Details: [phase-3.md](phase-3.md).
+
 ## Shortcut that prints the same token
 
 From the repository root, this runs the sequence above and prints the token JSON:

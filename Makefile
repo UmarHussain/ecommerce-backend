@@ -10,7 +10,7 @@ APP      ?= storefront-web
         infra-up infra-down infra-logs infra-status apps-up realm-reconcile realm-migrate-portals \
         backend-compile backend-test backend-verify backend-clean \
         frontend-install frontend-test frontend-build frontend-clean \
-        run-service run-frontend smoke security-check catalog-check verify clean
+        run-service run-frontend smoke security-check catalog-check inventory-check verify clean
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target> [SERVICE=<module>] [APP=<frontend>]\n\n"} \
@@ -94,6 +94,9 @@ security-check: ## Phase 1 acceptance checks with real PKCE-issued tokens agains
 
 catalog-check: ## Phase 2 catalog checks with real PKCE tokens through the gateway (needs infra + gateway, user-service, catalog-service)
 	bash scripts/local/catalog-check.sh
+
+inventory-check: ## Phase 3 inventory checks with real PKCE tokens through the gateway (needs infra + gateway, user, catalog, inventory)
+	bash scripts/local/inventory-check.sh
 
 verify: check backend-verify frontend-test frontend-build ## check + backend-verify + frontend test/build (run frontend-install first)
 

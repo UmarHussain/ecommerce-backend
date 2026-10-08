@@ -38,9 +38,18 @@ if [[ "$service" == user-service ]]; then
   export KEYCLOAK_ADMIN_CLIENT_ID=user-service-admin
   export KEYCLOAK_ADMIN_CLIENT_SECRET="$USER_SERVICE_ADMIN_SECRET"
 fi
+if [[ "$service" == inventory-service ]]; then
+  export DATABASE_URL=jdbc:postgresql://localhost:55432/inventorydb
+  export DATABASE_USERNAME=inventory_app
+  export DATABASE_PASSWORD="$INVENTORY_DB_PASSWORD"
+  export DATABASE_SCHEMA=inventory
+  export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
+  export SPRING_PROFILES_ACTIVE=local
+fi
 if [[ "$service" == api-gateway ]]; then
   export USER_SERVICE_URL="${USER_SERVICE_URL:-http://localhost:8093}"
   export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
+  export INVENTORY_SERVICE_URL="${INVENTORY_SERVICE_URL:-http://localhost:8095}"
 fi
 
 cd "$ROOT/backend"

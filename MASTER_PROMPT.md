@@ -177,6 +177,7 @@ Use application roles as named permission bundles. Represent permissions as clie
 | CATALOG_CREATOR | `admin.access`, `catalog.read`, `catalog.create` |
 | CATALOG_EDITOR | `admin.access`, `catalog.read`, `catalog.update`, `catalog.activate` |
 | INVENTORY_MANAGER | `admin.access`, `catalog.read`, `inventory.read`, `inventory.adjust` |
+| INVENTORY_READER | `admin.access`, `inventory.read` |
 | ORDER_MANAGER | `admin.access`, `order.read_all`, `order.process`, `order.dispatch`, `order.deliver`, `order.cancel_any` |
 | USER_ADMIN | `admin.access`, `user.read`, `user.create`, `user.update`, `user.manage_staff`, `role.read`, `role.assign` |
 | PLATFORM_ADMIN | All explicitly defined application staff permissions, including `role.manage` and `user.disable_identity` |

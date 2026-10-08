@@ -2,7 +2,7 @@
 
 ## Current state and assignment
 
-Phase 0 verified and Phase 1 implemented in this checkout. A later architecture refactor removed the two portal backends; browsers now call the gateway, which routes to the owning domain service. Do not restart Phase 1. Write-up: [docs/phase-1.md](docs/phase-1.md). Phases 2–3 complete the first business milestone; later phases remain roadmap.
+Phase 0 verified and Phases 1–3 implemented in this checkout. A later architecture refactor removed the two portal backends; browsers now call the gateway, which routes to the owning domain service. Do not restart Phase 1. Write-ups: [docs/phase-1.md](docs/phase-1.md), [docs/phase-2.md](docs/phase-2.md), and [docs/phase-3.md](docs/phase-3.md). Later phases remain roadmap.
 
 The user explicitly authorized using the uploaded project to prepare this separate repository. Retain its catalog business implementation and tests; the original application outside this directory remains untouched.
 
@@ -49,9 +49,9 @@ Acceptance gate:
 
 Admin catalog reads, immutable SKU, required `expectedVersion`, MapStruct response mapping, explicit gateway routes, and catalog screens in both SPAs. Write-up: [docs/phase-2.md](docs/phase-2.md). Gate: catalog administration through the gateway to catalog-service with real issued tokens (`make catalog-check`).
 
-## Phase 3 — Inventory administration
+## Phase 3 — Inventory administration (implemented; stopped for review)
 
-Add inventorydb migrations/entities, stock setup, atomic safe adjustments, reasons/history, SKU verification through catalog, fine-grained permissions, and UI. Never permit on_hand < reserved or negative stock. Gate: permission and concurrent adjustment tests with PostgreSQL.
+Stock setup, signed adjustments, immutable history, catalog SKU checks at setup, and inventory screens. Write-up: [docs/phase-3.md](docs/phase-3.md). Gate: permission and concurrent adjustment tests with PostgreSQL, plus `make inventory-check` through the gateway.
 
 ## Phase 4 — Cart and Redis
 

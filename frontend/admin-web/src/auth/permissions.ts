@@ -26,6 +26,14 @@ export function canSeeCatalog(permissions: string[] | undefined): boolean {
   return hasPermission(permissions, 'PERM_catalog.read')
 }
 
+export function canSeeInventory(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, 'PERM_inventory.read')
+}
+
+export function canAdjustInventory(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, 'PERM_inventory.adjust')
+}
+
 export function canCreateCatalog(permissions: string[] | undefined): boolean {
   return hasPermission(permissions, 'PERM_catalog.create')
 }

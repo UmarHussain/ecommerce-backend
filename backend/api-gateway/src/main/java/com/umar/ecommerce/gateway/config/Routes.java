@@ -14,7 +14,8 @@ public class Routes {
     RouteLocator gatewayRoutes(
             RouteLocatorBuilder builder,
             @Value("${USER_SERVICE_URL:http://localhost:8093}") String users,
-            @Value("${CATALOG_SERVICE_URL:http://localhost:8094}") String catalog
+            @Value("${CATALOG_SERVICE_URL:http://localhost:8094}") String catalog,
+            @Value("${INVENTORY_SERVICE_URL:http://localhost:8095}") String inventory
     ) {
         return builder.routes()
                 .route("public-catalog-product-slug", route -> route
@@ -174,6 +175,26 @@ public class Routes {
                         .path("/api/v1/admin/catalog/variants/{variantId}/status")
                         .and().method("PATCH")
                         .uri(catalog))
+                .route("admin-inventory-stock-items-read", route -> route
+                        .path("/api/v1/admin/inventory/stock-items")
+                        .and().method("GET")
+                        .uri(inventory))
+                .route("admin-inventory-stock-adjustments-read", route -> route
+                        .path("/api/v1/admin/inventory/stock-items/{id}/adjustments")
+                        .and().method("GET")
+                        .uri(inventory))
+                .route("admin-inventory-stock-adjustments", route -> route
+                        .path("/api/v1/admin/inventory/stock-items/{id}/adjustments")
+                        .and().method("POST")
+                        .uri(inventory))
+                .route("admin-inventory-stock-item-read", route -> route
+                        .path("/api/v1/admin/inventory/stock-items/{id}")
+                        .and().method("GET")
+                        .uri(inventory))
+                .route("admin-inventory-stock-items", route -> route
+                        .path("/api/v1/admin/inventory/stock-items")
+                        .and().method("POST")
+                        .uri(inventory))
                 .build();
     }
 }

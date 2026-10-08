@@ -48,6 +48,7 @@ Run `make help` for the same list.
 | `make smoke` | HTTP checks against Keycloak discovery, gateway health, public catalog, and a 401 on an admin endpoint. | `bash scripts/local/smoke.sh` |
 | `make security-check` | Phase 1 acceptance: real PKCE tokens, audience/role isolation, profile ownership, USER_ADMIN anti-elevation, rejected ID tokens and identity headers. Needs infra + gateway, user-service, and catalog. | `bash scripts/local/security-check.sh` |
 | `make catalog-check` | Phase 2 catalog acceptance: anonymous browsing, viewer/creator/editor/customer/dual-role tokens, SKU immutability, stale `expectedVersion`, inactive isolation, direct catalog-service denial, and correlation ids. Needs infra + gateway, user-service, and catalog. | `bash scripts/local/catalog-check.sh` |
+| `make inventory-check` | Phase 3 inventory acceptance: PKCE tokens for manager, reader, platform admin, catalog-only, customer, and storefront dual-role; setup stores the catalog SKU; idempotent replay; stale version; inactive catalog variant; correlation id. Needs infra + gateway, user-service, catalog, and inventory. Runs `realm-reconcile` first. | `bash scripts/local/inventory-check.sh` |
 | `make realm-reconcile` | Additive Keycloak realm update from the template. Never deletes users or resets passwords. | `bash scripts/local/realm-reconcile.sh` |
 | `make realm-migrate-portals` | Moves `admin.access` to `api-gateway` and deletes the obsolete portal clients. Keeps users, passwords, and volumes. | `bash scripts/local/migrate-remove-portal-backends.sh` |
 | `make verify` | `check` + `backend-verify` + `frontend-test` + `frontend-build`. `backend-test` is not run separately because `verify` already includes the test phase. Run `make frontend-install` once before. | the four commands above |
@@ -141,12 +142,12 @@ With infrastructure up, start services in separate WSL2 terminals. Each service 
 |---|---|---|---|
 | catalog-service | `make run-service SERVICE=catalog-service` | 8094 | Implemented: Flyway migrations, seed data, products/categories CRUD, search, permission checks, tests |
 | user-service | `make run-service SERVICE=user-service` | 8093 | Profiles, `/api/v1/admin/me`, Keycloak Admin adapter, durable operations |
-| api-gateway | `make run-service SERVICE=api-gateway` | 8090 | Routes and rewrites to catalog-service and user-service |
-| inventory-service | `make run-service SERVICE=inventory-service` | 8095 | Secured shell with health endpoint; no business API (Phase 3) |
+| api-gateway | `make run-service SERVICE=api-gateway` | 8090 | Routes and rewrites to user-service, catalog-service, and inventory-service |
+| inventory-service | `make run-service SERVICE=inventory-service` | 8095 | Stock setup, adjustments, and history on `inventorydb`; catalog lookup at setup |
 | cart-service | `make run-service SERVICE=cart-service` | 8096 | Secured shell; Phase 4 |
 | order-service | `make run-service SERVICE=order-service` | 8097 | Secured shell; Phase 5 |
 
-Minimum set for the public catalog path through the gateway: `catalog-service` and `api-gateway`. Add `user-service` before profile or admin calls.
+Minimum set for the public catalog path through the gateway: `catalog-service` and `api-gateway`. Add `user-service` before profile or admin calls. Stock administration also needs `inventory-service`.
 
 Equivalent direct command (what `run-service.sh` does for catalog-service):
 

@@ -22,6 +22,10 @@ Implemented: catalog OpenAPI annotations and user-service OpenAPI. The gateway r
 | `GET /api/v1/admin/catalog/categories` and `GET .../categories/{id}` | coarse `admin.access`, then `catalog.read` | catalog-service, same path |
 | `GET /api/v1/admin/catalog/products`, `GET .../products/{id}`, `GET .../products/{id}/variants`, `GET .../variants/{id}` | coarse `admin.access`, then `catalog.read` | catalog-service, same path |
 | `POST/PUT/PATCH /api/v1/admin/catalog/...` | coarse `admin.access`, then catalog create/update/activate | catalog-service, same path |
+| `GET /api/v1/admin/inventory/stock-items` and `GET .../stock-items/{id}` | coarse `admin.access`, then `inventory.read` | inventory-service, same path |
+| `GET /api/v1/admin/inventory/stock-items/{id}/adjustments` | coarse `admin.access`, then `inventory.read` | inventory-service, same path |
+| `POST /api/v1/admin/inventory/stock-items` | coarse `admin.access`, then `inventory.adjust` plus caller `catalog.read` | inventory-service, same path. `201` and `Location` |
+| `POST /api/v1/admin/inventory/stock-items/{id}/adjustments` | coarse `admin.access`, then `inventory.adjust` | inventory-service, same path |
 
 ### Catalog filters and versions
 
@@ -41,7 +45,46 @@ Example stale update:
 { "title": "Conflict", "status": 409, "code": "CATALOG_STALE_VERSION", "detail": "Catalog data changed since it was loaded; reload and review the current values", "correlationId": "..." }
 ```
 
-When catalog-service cannot be reached, the gateway returns `503` `GATEWAY_DOWNSTREAM_UNAVAILABLE`, `504` `GATEWAY_DOWNSTREAM_TIMEOUT`, or `502` `GATEWAY_DOWNSTREAM_ERROR`, with the same correlation id. A response catalog-service already wrote, including problem JSON, is forwarded unchanged.
+When catalog-service cannot be reached, the gateway returns `503` `GATEWAY_DOWNSTREAM_UNAVAILABLE`, `504` `GATEWAY_DOWNSTREAM_TIMEOUT`, or `502` `GATEWAY_DOWNSTREAM_ERROR`, with the same correlation id. A response catalog-service already wrote, including problem JSON, is forwarded unchanged. The same gateway mapping applies when inventory-service cannot be reached.
+
+### Inventory setup, adjustments, and history
+
+Setup and adjustment require header `Idempotency-Key`. The same key, caller, operation, and payload replays the stored status and body. A different payload is `409` `INVENTORY_IDEMPOTENCY_CONFLICT`.
+
+Stock list query parameters are `search` (SKU, or a UUID matching the stock id or catalog variant id), `page`, `size` (1–100), and `sort` (`sku`, `onHand`, `createdAt`, or `updatedAt`, then `asc` or `desc`, with `id` ascending as the tie-break). History accepts `page`, `size`, and `sort` (`createdAt,asc` or `createdAt,desc`, then `id` in that direction). Defaults are `sku,asc` and `createdAt,desc`.
+
+Setup body: `catalogVariantId`, `initialOnHand` (0 through 1000000000), `reason` (`OPENING_BALANCE`), optional `note` and `reference`. The service stores the catalog SKU. Adjustment body: nonzero `delta`, `reason` (`INBOUND_RECEIPT`, `CORRECTION`, `DAMAGE_LOSS`, or `RETURN`), `expectedVersion`, optional `note` and `reference`. `reserved` is not a request field. `available` on the response is `onHand - reserved`.
+
+| Condition | Status | Code |
+|---|---|---|
+| Missing or invalid quantity, reason, version, or idempotency key | 400 | `INVENTORY_VALIDATION_FAILED` or `INVENTORY_MALFORMED_REQUEST` |
+| Integer overflow | 400 | `INVENTORY_QUANTITY_OVERFLOW` |
+| Missing token or wrong token type | 401 | `INVENTORY_AUTHENTICATION_REQUIRED` |
+| Missing inventory permission | 403 | `INVENTORY_ACCESS_DENIED` |
+| Setup without `catalog.read` | 403 | `INVENTORY_CATALOG_READ_REQUIRED` |
+| Catalog rejects the forwarded token | 403 | `INVENTORY_CATALOG_FORBIDDEN` |
+| Unknown stock id | 404 | `INVENTORY_NOT_FOUND` |
+| Unknown catalog variant | 404 | `INVENTORY_CATALOG_VARIANT_NOT_FOUND` |
+| `expectedVersion` does not match | 409 | `INVENTORY_STALE_VERSION` |
+| Result would be negative or below reserved | 409 | `INVENTORY_STOCK_INVARIANT` |
+| Variant already has stock | 409 | `INVENTORY_VARIANT_ALREADY_STOCKED` |
+| Same idempotency key, different payload | 409 | `INVENTORY_IDEMPOTENCY_CONFLICT` |
+| Same key still in progress after lock timeout | 409 | `INVENTORY_COMMAND_IN_PROGRESS` (`Retry-After: 1`) |
+| Variant, product, or category inactive at setup | 409 | `INVENTORY_CATALOG_INACTIVE` |
+| Catalog cannot be read | 503 | `INVENTORY_CATALOG_UNAVAILABLE` |
+| Catalog or lock wait timed out | 504 | `INVENTORY_CATALOG_TIMEOUT` |
+
+Example stale adjustment:
+
+```json
+{ "delta": 2, "reason": "INBOUND_RECEIPT", "expectedVersion": 0 }
+```
+
+```json
+{ "title": "Conflict", "status": 409, "code": "INVENTORY_STALE_VERSION", "detail": "Stock changed since it was loaded", "correlationId": "..." }
+```
+
+Full behavior: [phase-3.md](../phase-3.md).
 
 `GET /api/v1/admin/users/{id}/roles` is authorized with `role.read` and is registered before the single-segment user read rule, so `user.read` does not grant role reads.
 

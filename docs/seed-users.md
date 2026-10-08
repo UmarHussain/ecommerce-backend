@@ -9,7 +9,8 @@ All seeded application users use the generated `DEMO_USER_PASSWORD` in the ignor
 | customer@example.test | CUSTOMER | Own profile/cart/orders; denied admin |
 | catalog-creator@example.test | CATALOG_CREATOR | Create allowed; update denied |
 | catalog-editor@example.test | CATALOG_EDITOR | Update allowed; create denied |
-| inventory-manager@example.test | INVENTORY_MANAGER | Stock adjustment; denied user administration |
+| inventory-manager@example.test | INVENTORY_MANAGER | Stock setup and adjustment; denied user administration |
+| inventory-reader@example.test | INVENTORY_READER | Stock read and history; setup and adjustment denied; no `catalog.read` |
 | user-admin@example.test | USER_ADMIN | Allowed staff onboarding; no privileged escalation |
 | platform-admin@example.test | PLATFORM_ADMIN | Application-wide staff permissions; not Keycloak realm-admin |
 | dual-role@example.test | CUSTOMER, CATALOG_CREATOR | Same identity in storefront/admin; storefront token excludes staff permissions |

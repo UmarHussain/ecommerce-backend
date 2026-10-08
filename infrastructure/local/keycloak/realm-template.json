@@ -100,6 +100,20 @@
         }
       },
       {
+        "name": "INVENTORY_READER",
+        "composite": true,
+        "composites": {
+          "client": {
+            "api-gateway": [
+              "admin.access"
+            ],
+            "inventory-service": [
+              "inventory.read"
+            ]
+          }
+        }
+      },
+      {
         "name": "ORDER_MANAGER",
         "composite": true,
         "composites": {
@@ -555,6 +569,7 @@
         "CATALOG_CREATOR",
         "CATALOG_EDITOR",
         "INVENTORY_MANAGER",
+        "INVENTORY_READER",
         "ORDER_MANAGER",
         "USER_ADMIN",
         "PLATFORM_ADMIN"
@@ -640,6 +655,24 @@
       "emailVerified": true,
       "realmRoles": [
         "INVENTORY_MANAGER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__DEMO_USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "inventory-reader@example.test",
+      "email": "inventory-reader@example.test",
+      "firstName": "inventory-reader",
+      "lastName": "Local Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "INVENTORY_READER"
       ],
       "credentials": [
         {

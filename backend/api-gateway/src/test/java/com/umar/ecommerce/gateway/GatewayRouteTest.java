@@ -42,6 +42,7 @@ class GatewayRouteTest {
         String base = "http://127.0.0.1:" + DOWNSTREAM.getAddress().getPort();
         registry.add("USER_SERVICE_URL", () -> base);
         registry.add("CATALOG_SERVICE_URL", () -> base);
+        registry.add("INVENTORY_SERVICE_URL", () -> base);
         registry.add("platform.gateway.rate-limit.enabled", () -> "false");
         registry.add("platform.security.issuer-uri", () -> "http://localhost:8180/realms/ecommerce-local");
         registry.add("platform.security.jwk-set-uri", () -> base + "/jwks");
@@ -223,6 +224,38 @@ class GatewayRouteTest {
                 .expectHeader().contentType("application/problem+json")
                 .expectBody()
                 .jsonPath("$.code").isEqualTo("CATALOG_STALE_VERSION");
+    }
+
+    @Test
+    void adminInventoryRoutesAreExplicit() {
+        client.get().uri("/api/v1/admin/inventory/stock-items?search=SKU&page=0")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .header("X-Correlation-ID", "corr-inventory-1")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals("X-Correlation-ID", "corr-inventory-1");
+        org.junit.jupiter.api.Assertions.assertEquals("/api/v1/admin/inventory/stock-items", LAST.get().path());
+        org.junit.jupiter.api.Assertions.assertEquals("search=SKU&page=0", LAST.get().query());
+
+        client.post().uri("/api/v1/admin/inventory/stock-items/00000000-0000-0000-0000-000000000010/adjustments")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .header("Idempotency-Key", "idem-stock")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"delta\":1}")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals("POST", LAST.get().method());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "/api/v1/admin/inventory/stock-items/00000000-0000-0000-0000-000000000010/adjustments",
+                LAST.get().path()
+        );
+        org.junit.jupiter.api.Assertions.assertEquals("idem-stock", LAST.get().idempotencyKey());
+
+        client.put().uri("/api/v1/admin/inventory/stock-items/00000000-0000-0000-0000-000000000010")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .exchange()
+                .expectStatus().isNotFound();
+        org.junit.jupiter.api.Assertions.assertEquals("POST", LAST.get().method());
     }
 
     @Test

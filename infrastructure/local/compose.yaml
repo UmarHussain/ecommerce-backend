@@ -96,6 +96,7 @@ services:
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/ecommerce-local/protocol/openid-connect/certs
       USER_SERVICE_URL: http://user-service:8093
       CATALOG_SERVICE_URL: http://catalog-service:8094
+      INVENTORY_SERVICE_URL: http://inventory-service:8095
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,6 +105,8 @@ services:
       user-service:
         condition: service_started
       catalog-service:
+        condition: service_started
+      inventory-service:
         condition: service_started
     mem_limit: 512m
     ports:
@@ -170,6 +173,12 @@ services:
       SERVER_PORT: '8095'
       OIDC_ISSUER_URI: http://localhost:8180/realms/ecommerce-local
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/ecommerce-local/protocol/openid-connect/certs
+      DATABASE_URL: jdbc:postgresql://postgres:5432/inventorydb
+      DATABASE_USERNAME: inventory_app
+      DATABASE_PASSWORD: ${INVENTORY_DB_PASSWORD:?Run make bootstrap}
+      DATABASE_SCHEMA: inventory
+      CATALOG_SERVICE_URL: http://catalog-service:8094
+      SPRING_PROFILES_ACTIVE: local
     depends_on:
       postgres:
         condition: service_healthy

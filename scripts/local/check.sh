@@ -90,7 +90,7 @@ realm_check "admin.access is an api-gateway client role" \
   'any(.roles.client["api-gateway"][]?; .name == "admin.access")'
 realm_check "staff realm roles composite api-gateway/admin.access" \
   '. as $realm
-   | ["CATALOG_VIEWER","CATALOG_CREATOR","CATALOG_EDITOR","INVENTORY_MANAGER","ORDER_MANAGER","USER_ADMIN","PLATFORM_ADMIN"]
+   | ["CATALOG_VIEWER","CATALOG_CREATOR","CATALOG_EDITOR","INVENTORY_MANAGER","INVENTORY_READER","ORDER_MANAGER","USER_ADMIN","PLATFORM_ADMIN"]
    | all(.[]; . as $name | $realm.roles.realm | any(.[]; .name == $name and ((.composites.client["api-gateway"] // []) | index("admin.access") != null)))'
 realm_check "composite realm roles reference defined client roles" \
   '. as $realm

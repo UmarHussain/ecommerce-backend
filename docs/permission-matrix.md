@@ -11,6 +11,7 @@ Application roles are Keycloak realm composites. Permissions are client roles on
 | CATALOG_CREATOR | `admin.access`, `catalog.read`, `catalog.create` |
 | CATALOG_EDITOR | `admin.access`, `catalog.read`, `catalog.update`, `catalog.activate` |
 | INVENTORY_MANAGER | `admin.access`, `catalog.read`, `inventory.read`, `inventory.adjust` |
+| INVENTORY_READER | `admin.access`, `inventory.read` |
 | ORDER_MANAGER | `admin.access`, `order.read_all`, `order.process`, `order.dispatch`, `order.deliver`, `order.cancel_any` |
 | USER_ADMIN | `admin.access`, `user.read`, `user.create`, `user.update`, `user.manage_staff`, `role.read`, `role.assign` |
 | PLATFORM_ADMIN | All staff permissions above plus `role.manage` and `user.disable_identity` |
@@ -20,3 +21,5 @@ USER_ADMIN may assign `CUSTOMER` and the catalog/inventory/order staff bundles. 
 Storefront tokens include CUSTOMER only. A dual-role person must use the admin client to receive staff permissions.
 
 Catalog administration reads require `catalog.read` on the `catalog-service` client. `catalog.create`, `catalog.update`, and `catalog.activate` do not grant reads, and the same permission names on another client are ignored. Create requests cannot set activation; that stays on the status commands.
+
+Inventory reads and history require `inventory.read` on the `inventory-service` client. Setup and adjustment require `inventory.adjust`. Setup also requires `catalog.read` on the `catalog-service` client in the same access token. inventory-service does not map that catalog role into an inventory authority. `INVENTORY_READER` can read stock and cannot set it up. `catalog-viewer@example.test` is not a pure inventory reader; that account has also carried `CATALOG_EDITOR` in this checkout. Use `inventory-reader@example.test` for a token with only `inventory.read`.

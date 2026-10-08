@@ -3,7 +3,8 @@ import { AuthProvider, useAuth } from 'react-oidc-context'
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import { api } from './api/client'
 import { oidcConfig } from './auth/oidc'
-import { canSeeCatalog, canSeeRoles, canSeeUsers } from './auth/permissions'
+import { canSeeCatalog, canSeeInventory, canSeeRoles, canSeeUsers } from './auth/permissions'
+import { StockDetailPage, StockListPage, StockSetupPage } from './pages/inventory/StockPages'
 import { CategoriesPage } from './pages/catalog/CategoriesPage'
 import { CategoryPage } from './pages/catalog/CategoryPage'
 import { ProductPage } from './pages/catalog/ProductPage'
@@ -49,6 +50,7 @@ function Shell() {
         {canSeeRoles(permissions) ? <Link to="/roles">Roles</Link> : null}
         {canSeeCatalog(permissions) ? <Link to="/catalog/categories">Categories</Link> : null}
         {canSeeCatalog(permissions) ? <Link to="/catalog/products">Products</Link> : null}
+        {canSeeInventory(permissions) ? <Link to="/inventory">Inventory</Link> : null}
       </header>
       <Routes>
         <Route path="/" element={<HomePage permissions={permissions} denied={denied} />} />
@@ -61,6 +63,9 @@ function Shell() {
         <Route path="/catalog/products" element={<ProductsPage permissions={permissions} />} />
         <Route path="/catalog/products/new" element={<ProductPage permissions={permissions} />} />
         <Route path="/catalog/products/:productId" element={<ProductPage permissions={permissions} />} />
+        <Route path="/inventory" element={<StockListPage permissions={permissions} />} />
+        <Route path="/inventory/new" element={<StockSetupPage permissions={permissions} />} />
+        <Route path="/inventory/:stockId" element={<StockDetailPage permissions={permissions} />} />
         <Route path="/callback" element={<CallbackPage />} />
         <Route path="/silent-renew" element={<SilentRenewPage />} />
       </Routes>

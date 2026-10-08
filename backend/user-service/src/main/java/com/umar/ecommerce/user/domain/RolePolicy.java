@@ -16,6 +16,7 @@ public final class RolePolicy {
     public static final String CATALOG_CREATOR = "CATALOG_CREATOR";
     public static final String CATALOG_EDITOR = "CATALOG_EDITOR";
     public static final String INVENTORY_MANAGER = "INVENTORY_MANAGER";
+    public static final String INVENTORY_READER = "INVENTORY_READER";
     public static final String ORDER_MANAGER = "ORDER_MANAGER";
     public static final String USER_ADMIN = "USER_ADMIN";
     public static final String PLATFORM_ADMIN = "PLATFORM_ADMIN";
@@ -26,6 +27,7 @@ public final class RolePolicy {
             CATALOG_CREATOR,
             CATALOG_EDITOR,
             INVENTORY_MANAGER,
+            INVENTORY_READER,
             ORDER_MANAGER,
             USER_ADMIN,
             PLATFORM_ADMIN
@@ -37,6 +39,7 @@ public final class RolePolicy {
             CATALOG_CREATOR,
             CATALOG_EDITOR,
             INVENTORY_MANAGER,
+            INVENTORY_READER,
             ORDER_MANAGER
     );
 
@@ -47,6 +50,7 @@ public final class RolePolicy {
             CATALOG_CREATOR,
             CATALOG_EDITOR,
             INVENTORY_MANAGER,
+            INVENTORY_READER,
             ORDER_MANAGER,
             USER_ADMIN,
             PLATFORM_ADMIN
