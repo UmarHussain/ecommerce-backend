@@ -60,6 +60,8 @@ public class PublicCatalogController {
             @RequestParam(name = "category", required = false) String categorySlug,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "ISO 4217 currency. Required when minPrice or maxPrice is set. Amounts are not converted.")
+            @RequestParam(required = false) String currency,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             @Parameter(description = "Allowlisted field and direction, for example name,asc")
@@ -70,6 +72,7 @@ public class PublicCatalogController {
                 categorySlug,
                 minPrice,
                 maxPrice,
+                currency,
                 page,
                 size,
                 sort

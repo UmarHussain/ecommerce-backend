@@ -10,7 +10,7 @@ APP      ?= storefront-web
         infra-up infra-down infra-logs infra-status apps-up realm-reconcile realm-migrate-portals \
         backend-compile backend-test backend-verify backend-clean \
         frontend-install frontend-test frontend-build frontend-clean \
-        run-service run-frontend smoke security-check verify clean
+        run-service run-frontend smoke security-check catalog-check verify clean
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target> [SERVICE=<module>] [APP=<frontend>]\n\n"} \
@@ -91,6 +91,9 @@ smoke: ## HTTP smoke test against running Keycloak and gateway (needs infra + se
 
 security-check: ## Phase 1 acceptance checks with real PKCE-issued tokens against the running stack (needs infra + all services)
 	bash scripts/local/security-check.sh
+
+catalog-check: ## Phase 2 catalog checks with real PKCE tokens through the gateway (needs infra + gateway, user-service, catalog-service)
+	bash scripts/local/catalog-check.sh
 
 verify: check backend-verify frontend-test frontend-build ## check + backend-verify + frontend test/build (run frontend-install first)
 

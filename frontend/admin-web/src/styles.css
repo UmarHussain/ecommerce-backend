@@ -85,10 +85,50 @@ body {
   padding: 0.5rem 0;
 }
 
+.list li > form {
+  flex: 1;
+}
+
 .error {
   color: #9b1c1c;
 }
 
-input {
+input, select, textarea, button {
   padding: 0.5rem 0.75rem;
+  font: inherit;
+}
+
+textarea {
+  min-height: 5rem;
+}
+
+.filters, .stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.filters {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.muted {
+  color: #665a7d;
+}
+
+.banner {
+  border: 1px solid #9b1c1c;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+button:disabled {
+  opacity: 0.5;
 }

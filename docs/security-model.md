@@ -8,7 +8,7 @@ Backend authority convention: `PERM_catalog.create`, `PERM_inventory.adjust`, et
 
 JWT checks: signature (default RS256 decoder), issuer, timestamps, expected audience, and Keycloak `typ=Bearer`. ID tokens must fail. No custom password login, browser role headers, or gateway-only security. Tokens are relayed for delegated calls once Phase 1 adds those calls. Do not replace the user token with an unrestricted service token.
 
-Starter endpoints permit health and API documentation. Other unlisted endpoints are denied. Business documentation is local-only; sensitive actuator endpoints are not exposed. Catalog admin POST/PUT/PATCH require create/update/activate respectively, also enforced via method security.
+Starter endpoints permit health and API documentation. Other unlisted endpoints are denied. Business documentation is local-only; sensitive actuator endpoints are not exposed. Catalog admin GET requires `catalog.read`, and POST/PUT/PATCH require create/update/activate, also enforced via method security. Catalog-service converts only its own client roles.
 
 The runtime service account `user-service-admin` has `manage-users`, `view-users`, `query-clients`, `view-clients`, and `view-realm` only. `make realm-reconcile` applies those grants additively. It is not realm-admin and cannot create Keycloak realm roles or clients. Custom application bundles are therefore stored in userdb and expanded to existing client-role permissions.
 

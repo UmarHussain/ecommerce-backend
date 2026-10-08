@@ -284,6 +284,16 @@ Body:
 
 Who can call which route is [permission-matrix.md](permission-matrix.md).
 
+## Catalog calls
+
+Sign in with `admin-spa` as `catalog-viewer@example.test`, `catalog-creator@example.test`, or `catalog-editor@example.test`. Public catalog calls need no token.
+
+- `GET http://localhost:8090/api/v1/store/catalog/products?currency=USD`
+- `GET http://localhost:8090/api/v1/admin/catalog/products`
+- `PUT http://localhost:8090/api/v1/admin/catalog/categories/{id}` with `expectedVersion` from the GET
+
+A second PUT that reuses the old `expectedVersion` returns `409` and `CATALOG_STALE_VERSION`. Full route and error list: [contracts/README.md](contracts/README.md) and [phase-2.md](phase-2.md).
+
 ## Shortcut that prints the same token
 
 From the repository root, this runs the sequence above and prints the token JSON:

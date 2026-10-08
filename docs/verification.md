@@ -88,10 +88,27 @@ Executed from `/mnt/d/GitHub/ecommerce-local-platform` in WSL2 Ubuntu (Java 21.0
 
 Not executed this session: `make apps-up` (containerized application images). Expired and wrong-audience tokens were covered by `AccessTokenRulesTest`, not by a live signed expired token. Inventory, cart, and order services were not started.
 
+## 2026-10-08 — Phase 2 catalog
+
+Executed from `/mnt/d/GitHub/ecommerce-local-platform` in WSL2 (Java 21.0.12.1, Node/npm already used by the frontend workspace).
+
+- `make check`: passed, including `bash -n` on `scripts/local/catalog-check.sh` and Markdown links.
+- `npm test` in `frontend`: storefront 4 passed, admin 10 passed (catalog component tests 5). The first admin run failed because renders leaked between tests; both `setup.ts` files now call Testing Library `cleanup`.
+- `make frontend-build`: both production builds passed.
+- `make backend-verify`: failed in catalog Failsafe. `CatalogPostgresIT.adminReadsIncludeInactiveWhilePublicReadsExcludeTheChain` threw `IllegalAccessException` because Hibernate's proxy could not call public getters declared on package-private `AuditableEntity`. `staleSequentialWritesAndOverlappingUpdatesConflict` expected a version bump from an update that did not change any field. `AuditableEntity` is now public. The IT updates the name before asserting the version. Resume command `./mvnw -B verify -rf :catalog-service`: BUILD SUCCESS. Catalog Surefire 29, `CatalogPostgresIT` 12, inventory/cart/order context tests 1 each. The earlier part of the same verify had already passed api-gateway Surefire 14, user-service Surefire 24, `UserServicePostgresIT` 1, and `UserServiceKeycloakIT` 0 tests.
+- Infrastructure: project Postgres and Keycloak were exited. `make infra-up` started them; they then received a fast shutdown (Postgres exit 0, Keycloak 143) with no Docker kill event captured. A later `compose.sh up -d postgres keycloak` stayed up. No volumes were deleted. Unrelated containers were not stopped.
+- Source processes: catalog-service 8094, user-service 8093, api-gateway 8090, storefront 5173, admin 5174.
+- `make smoke`: passed.
+- `make security-check`: passed. The catalog-viewer token's realm roles were `CATALOG_EDITOR,CATALOG_VIEWER` both before and after re-login. That extra editor role is leftover from an earlier role-assignment check; this run did not remove it and did not reset seed users.
+- `make catalog-check`: passed. Anonymous product, category, slug, id, variants, and batch reads; price bound without currency `400`; viewer read `200` and create `403`; customer and storefront dual-role admin catalog `403`; editor create `403`; creator create stayed active and creator update/activate `403`; editor update then stale `expectedVersion` `409` `CATALOG_STALE_VERSION`; missing version `400`; SKU change `409` `CATALOG_SKU_IMMUTABLE`; same SKU in another case kept the stored SKU; deactivating the new category hid the product from the public API and left the admin read `200`; direct catalog-service customer call was denied; missing product `404` echoed `X-Correlation-ID`.
+- Browser at `http://localhost:5173/catalog` without login listed Books and Electronics and opened Wireless Headphones with two active variants and 79.99 USD. Opening admin first as `http://127.0.0.1:5174` failed callback state because the registered redirect is `localhost`. From `http://localhost:5174`, `catalog-editor@example.test` saw category and product lists, including an inactive category, and no New category action. Two editor tabs loaded Electronics at version 0. The second saved "Electronics session B" (version 1). The first saved "Electronics session A" and showed "Catalog data changed since it was loaded" with the draft still in the form and a correlation reference. Reload and review replaced the draft. The name was then saved back to Electronics (version 2). `catalog-creator@example.test` saw New category, and the Electronics detail said the account can view the category and cannot edit it. `catalog-viewer@example.test` was not used in the browser because that account currently also has `CATALOG_EDITOR`.
+
+Not executed: `make apps-up`. A live connection-refused catalog outage was not produced; the gateway unit test maps `ConnectException` to 503, and `GatewayUnavailableTest` expects 504 `GATEWAY_DOWNSTREAM_TIMEOUT` for `127.0.0.1:1` on this host.
+
 ## Still required
 
-- `make apps-up` + `make smoke` in container mode (source-run path is what was verified, including the 2026-10-05 refactor).
-- Phase 2 catalog administration screens. Catalog admin HTTP routes exist on the gateway; the admin UI for them is not built.
+- `make apps-up` + `make smoke` in container mode (source-run path is what was verified, including the 2026-10-05 refactor and the 2026-10-08 catalog checks).
+- Phase 3 inventory. Do not treat the catalog-viewer account as a pure viewer until `CATALOG_EDITOR` is removed from it in Keycloak.
 
 ## Verification limits
 

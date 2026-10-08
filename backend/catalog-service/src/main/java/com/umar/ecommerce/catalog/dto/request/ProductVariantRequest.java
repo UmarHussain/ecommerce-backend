@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
-@Schema(description = "Product variant data used for create and update operations")
+@Schema(description = "Product variant data used to create a variant. The SKU is assigned only on create.")
 public record ProductVariantRequest(
         @NotBlank(message = "sku must not be blank")
         @Size(min = 3, max = 64, message = "sku must be between 3 and 64 characters")

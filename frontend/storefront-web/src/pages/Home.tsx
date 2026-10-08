@@ -19,8 +19,8 @@ export function HomePage() {
         ) : (
           <button type="button" onClick={() => void auth.signinRedirect()}>Sign in</button>
         )}
+        <Link to="/catalog">Browse catalog</Link>
         <Link to="/profile">Profile</Link>
-        <a href="/api/v1/store/catalog/products">Browse catalog API</a>
       </div>
     </main>
   )

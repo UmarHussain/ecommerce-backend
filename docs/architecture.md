@@ -11,7 +11,7 @@ flowchart TD
   Users --> Keycloak[Keycloak administration]
 ```
 
-Solid arrows identify implemented HTTP route code. Login is browser → Keycloak → SPA callback; the frontend never calls the Admin REST API. Staff administration is admin-web → gateway → user-service → Keycloak Admin REST. Public catalog is storefront-web → gateway → catalog-service. Phase 1 evidence: [phase-1.md](phase-1.md). The portal-backend removal is an architecture refactor on top of that completed phase.
+Solid arrows identify implemented HTTP route code. Login is browser → Keycloak → SPA callback; the frontend never calls the Admin REST API. Staff administration is admin-web → gateway → user-service → Keycloak Admin REST. Public catalog is storefront-web → gateway → catalog-service. Admin catalog uses the same path under `/api/v1/admin/catalog`. Phase 1 evidence: [phase-1.md](phase-1.md). Phase 2 catalog administration: [phase-2.md](phase-2.md). The portal-backend removal is an architecture refactor on top of that completed phase.
 
 Domain services own their invariants and databases. The gateway does not compose responses. A portal backend can be added later when a screen needs data from more than one service. Later, order-service owns the Saga, inventory owns reservations, and payment-service simulates charge/refund outcomes. PostgreSQL and Keycloak do not share an application transaction.
 

@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.UUID;
 
-@Schema(description = "Product data used for create and update operations")
+@Schema(description = "Product data used to create a product. Activation is not accepted on create.")
 public record ProductRequest(
         @NotBlank(message = "name must not be blank")
         @Size(max = 200, message = "name must be at most 200 characters")

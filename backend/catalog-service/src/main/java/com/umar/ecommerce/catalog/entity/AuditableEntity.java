@@ -12,8 +12,12 @@ import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Public so Hibernate proxies can invoke the inherited getters. A package-private
+ * superclass makes those calls fail with IllegalAccessException.
+ */
 @MappedSuperclass
-abstract class AuditableEntity {
+public abstract class AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

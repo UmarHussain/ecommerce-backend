@@ -10,3 +10,4 @@ Only user-service's infrastructure adapter may call Keycloak Admin REST. Least p
 No remote calls inside long database transactions. PostgreSQL and Keycloak need durable reconciliation, not a pretend global @Transactional.
 Later Kafka consumers require unique inbox keys committed with business changes; publish through transactional outbox. No exists-then-act dedupe.
 Use meaningful security, concurrency, and failure recovery tests; never mark Testcontainers tests passed if Docker was unavailable.
+Map new or changed Java DTO mappings with MapStruct: `@Mapper(componentModel = "spring")`, a service-local `@MapperConfig` (`unmappedTargetPolicy = ERROR`, constructor injection), explicit renamed or nested mappings, and generated code only under `target/`. Each service owns its mappers. Mappers do not apply business rules, versions, SKU changes, or activation, and they map only the variant list the service supplies.

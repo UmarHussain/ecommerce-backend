@@ -163,6 +163,69 @@ class GatewayRouteTest {
     }
 
     @Test
+    void publicCatalogDetailSlugVariantsAndBatchAreRewritten() {
+        client.get().uri("/api/v1/store/catalog/products/slug/wireless-headphones")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "/api/v1/catalog/products/slug/wireless-headphones", LAST.get().path());
+
+        client.get().uri("/api/v1/store/catalog/products/20000000-0000-0000-0000-000000000001/variants")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "/api/v1/catalog/products/20000000-0000-0000-0000-000000000001/variants",
+                LAST.get().path());
+
+        client.get().uri("/api/v1/store/catalog/products/20000000-0000-0000-0000-000000000001")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "/api/v1/catalog/products/20000000-0000-0000-0000-000000000001", LAST.get().path());
+
+        client.post().uri("/api/v1/store/catalog/variants/batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"skus\":[\"HEADPHONES-BLK\"]}")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals("POST", LAST.get().method());
+        org.junit.jupiter.api.Assertions.assertEquals("/api/v1/catalog/variants/batch", LAST.get().path());
+        org.junit.jupiter.api.Assertions.assertEquals("{\"skus\":[\"HEADPHONES-BLK\"]}", LAST.get().body());
+    }
+
+    @Test
+    void adminCatalogReadsAreExplicitAndProblemsPassThrough() {
+        client.get().uri("/api/v1/admin/catalog/categories?active=false")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .header("X-Correlation-ID", "corr-catalog-1")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals("X-Correlation-ID", "corr-catalog-1");
+        org.junit.jupiter.api.Assertions.assertEquals("/api/v1/admin/catalog/categories", LAST.get().path());
+        org.junit.jupiter.api.Assertions.assertEquals("active=false", LAST.get().query());
+        org.junit.jupiter.api.Assertions.assertEquals("Bearer admin-token", LAST.get().authorization());
+
+        client.get().uri("/api/v1/admin/catalog/products/20000000-0000-0000-0000-000000000001/variants")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "/api/v1/admin/catalog/products/20000000-0000-0000-0000-000000000001/variants",
+                LAST.get().path());
+
+        client.get().uri("/api/v1/admin/catalog/variants/30000000-0000-0000-0000-000000000001")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .header("X-Downstream-Status", "409")
+                .header("X-Correlation-ID", "corr-conflict")
+                .exchange()
+                .expectStatus().isEqualTo(409)
+                .expectHeader().valueEquals("X-Correlation-ID", "corr-conflict")
+                .expectHeader().contentType("application/problem+json")
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("CATALOG_STALE_VERSION");
+    }
+
+    @Test
     void browserPreflightFromTheAdminOriginIsAllowed() {
         client.options().uri("/api/v1/admin/me")
                 .header(HttpHeaders.ORIGIN, "http://localhost:5174")
@@ -202,13 +265,21 @@ class GatewayRouteTest {
                         exchange.getRequestHeaders().getFirst("X-Correlation-ID"),
                         new String(body, StandardCharsets.UTF_8)
                 ));
-                byte[] response = "{\"ok\":true}".getBytes(StandardCharsets.UTF_8);
-                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                String forced = exchange.getRequestHeaders().getFirst("X-Downstream-Status");
+                int status = forced == null ? 200 : Integer.parseInt(forced);
+                String payload = status == 200
+                        ? "{\"ok\":true}"
+                        : "{\"title\":\"Conflict\",\"status\":409,\"detail\":\"stale\",\"code\":\"CATALOG_STALE_VERSION\"}";
+                byte[] response = payload.getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().add(
+                        "Content-Type",
+                        status == 200 ? "application/json" : "application/problem+json"
+                );
                 String correlation = exchange.getRequestHeaders().getFirst("X-Correlation-ID");
                 if (correlation != null) {
                     exchange.getResponseHeaders().add("X-Correlation-ID", correlation);
                 }
-                exchange.sendResponseHeaders(200, response.length);
+                exchange.sendResponseHeaders(status, response.length);
                 exchange.getResponseBody().write(response);
                 exchange.close();
             });

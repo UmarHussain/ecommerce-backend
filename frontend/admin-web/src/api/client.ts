@@ -1,9 +1,13 @@
 export class ApiError extends Error {
   readonly status: number
+  readonly code: string | null
+  readonly correlationId: string | null
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code: string | null = null, correlationId: string | null = null) {
     super(message)
     this.status = status
+    this.code = code
+    this.correlationId = correlationId
   }
 }
 
@@ -17,7 +21,8 @@ export async function api<T>(path: string, token: string | undefined, init: Requ
   }
   const response = await fetch(path, { ...init, headers })
   if (!response.ok) {
-    throw new ApiError(response.status, await readMessage(response))
+    const problem = await readProblem(response)
+    throw new ApiError(response.status, problem.message, problem.code, problem.correlationId)
   }
   if (response.status === 204) {
     return undefined as T
@@ -25,12 +30,17 @@ export async function api<T>(path: string, token: string | undefined, init: Requ
   return response.json() as Promise<T>
 }
 
-async function readMessage(response: Response): Promise<string> {
+async function readProblem(response: Response): Promise<{ message: string; code: string | null; correlationId: string | null }> {
+  const headerId = response.headers.get('X-Correlation-ID')
   try {
-    const body = await response.json() as { detail?: string }
-    return body.detail ?? response.statusText
+    const body = await response.json() as { detail?: string; code?: string; correlationId?: string }
+    return {
+      message: body.detail ?? response.statusText,
+      code: body.code ?? null,
+      correlationId: body.correlationId ?? headerId,
+    }
   } catch {
-    return response.statusText
+    return { message: response.statusText, code: null, correlationId: headerId }
   }
 }
 

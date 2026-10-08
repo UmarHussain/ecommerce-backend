@@ -77,8 +77,53 @@ body {
   color: #9b1c1c;
 }
 
-input {
+input, select, textarea, button {
   padding: 0.5rem 0.75rem;
+  font: inherit;
+}
+
+.filters, .stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.filters {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.muted {
+  color: #52627a;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+
+.list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #d5deea;
+  padding: 0.5rem 0;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+button:disabled {
+  opacity: 0.5;
 }
 
 button, .actions a, .nav a {

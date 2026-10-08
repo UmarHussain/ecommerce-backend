@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-@Schema(description = "Category data used for create and update operations")
+@Schema(description = "Category data used to create a category. Activation is not accepted on create.")
 public record CategoryRequest(
         @NotBlank(message = "name must not be blank")
         @Size(max = 160, message = "name must be at most 160 characters")

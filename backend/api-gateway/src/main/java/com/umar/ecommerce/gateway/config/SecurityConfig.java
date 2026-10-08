@@ -27,7 +27,8 @@ public class SecurityConfig {
                 .authorizeExchange(auth -> auth
                         .pathMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
                         .pathMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .pathMatchers(HttpMethod.GET, "/api/v1/store/catalog/products", "/api/v1/store/catalog/categories").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/store/catalog/**").permitAll()
+                        .pathMatchers(HttpMethod.POST, "/api/v1/store/catalog/variants/batch").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/store/me", "/api/v1/store/me/**").hasAuthority("PERM_profile.read_own")
                         .pathMatchers(HttpMethod.PATCH, "/api/v1/store/me").hasAuthority("PERM_profile.update_own")
                         .pathMatchers(HttpMethod.POST, "/api/v1/store/me/addresses").hasAuthority("PERM_profile.update_own")

@@ -1,6 +1,11 @@
 package com.umar.ecommerce.catalog;
 
 import com.umar.ecommerce.catalog.dto.request.BatchVariantRequest;
+import com.umar.ecommerce.catalog.dto.request.CategoryRequest;
+import com.umar.ecommerce.catalog.dto.request.CategoryUpdateRequest;
+import com.umar.ecommerce.catalog.dto.request.ProductRequest;
+import com.umar.ecommerce.catalog.dto.request.ProductVariantRequest;
+import com.umar.ecommerce.catalog.dto.request.ProductVariantUpdateRequest;
 import com.umar.ecommerce.catalog.dto.response.BatchVariantResponse;
 import com.umar.ecommerce.catalog.dto.response.PageResponse;
 import com.umar.ecommerce.catalog.dto.response.ProductSummaryResponse;
@@ -11,12 +16,16 @@ import com.umar.ecommerce.catalog.entity.ProductVariant;
 import com.umar.ecommerce.catalog.repository.CategoryRepository;
 import com.umar.ecommerce.catalog.repository.ProductRepository;
 import com.umar.ecommerce.catalog.repository.ProductVariantRepository;
+import com.umar.ecommerce.catalog.exception.ResourceConflictException;
+import com.umar.ecommerce.catalog.exception.ResourceNotFoundException;
+import com.umar.ecommerce.catalog.service.CategoryService;
 import com.umar.ecommerce.catalog.service.ProductService;
 import com.umar.ecommerce.catalog.service.ProductVariantService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataAccessException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -28,6 +37,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -80,6 +93,8 @@ class CatalogPostgresIT {
     private ProductService productService;
     @Autowired
     private ProductVariantService variantService;
+    @Autowired
+    private CategoryService categoryService;
 
     @Test
     void migratesAsCatalogRoleAndLoadsRepeatableLocalSeed() {
@@ -115,6 +130,7 @@ class CatalogPostgresIT {
                 "electronics",
                 new BigDecimal("100.0000"),
                 new BigDecimal("120.0000"),
+                "USD",
                 0,
                 10,
                 "name,asc"
@@ -180,6 +196,7 @@ class CatalogPostgresIT {
                 null,
                 null,
                 null,
+                null,
                 0,
                 10,
                 "name,asc"
@@ -188,10 +205,10 @@ class CatalogPostgresIT {
                 .containsExactly("mechanical-keyboard");
 
         PageResponse<ProductSummaryResponse> firstPage = productService.searchPublicProducts(
-                null, null, null, null, 0, 1, "name,asc"
+                null, null, null, null, null, 0, 1, "name,asc"
         );
         PageResponse<ProductSummaryResponse> secondPage = productService.searchPublicProducts(
-                null, null, null, null, 1, 1, "name,asc"
+                null, null, null, null, null, 1, 1, "name,asc"
         );
         assertThat(firstPage.size()).isEqualTo(1);
         assertThat(firstPage.totalElements()).isGreaterThanOrEqualTo(2);
@@ -263,6 +280,212 @@ class CatalogPostgresIT {
                 UUID.randomUUID(),
                 productId
         )).isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void adminReadsIncludeInactiveWhilePublicReadsExcludeTheChain() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var category = categoryService.create(new CategoryRequest("Hidden " + suffix, "hidden-" + suffix));
+        categoryService.changeStatus(category.id(), false, category.version());
+        var hiddenProduct = productService.create(new ProductRequest(
+                "Hidden product " + suffix,
+                "hidden-product-" + suffix,
+                "not public",
+                category.id()
+        ));
+        var variant = variantService.create(hiddenProduct.id(), new ProductVariantRequest(
+                "HIDE-" + suffix.toUpperCase(),
+                "Hidden",
+                new BigDecimal("12.0000"),
+                "USD",
+                "https://example.test/hidden.jpg"
+        ));
+
+        assertThat(categoryService.getAdmin(category.id()).active()).isFalse();
+        assertThat(productService.getAdminProduct(hiddenProduct.id()).variants())
+                .extracting(ProductVariantResponse::sku)
+                .contains(variant.sku());
+        assertThatThrownBy(() -> productService.getPublicProduct(hiddenProduct.id()))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> productService.getPublicProductBySlug(hiddenProduct.slug()))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> variantService.listPublicVariants(hiddenProduct.id()))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThat(variantService.findPublicVariantsBySku(
+                new BatchVariantRequest(List.of(variant.sku()))
+        ).missingSkus()).containsExactly(variant.sku());
+        assertThat(productService.searchPublicProducts(suffix, null, null, null, null, 0, 20, "name,asc").items())
+                .isEmpty();
+        assertThat(categoryService.searchAdmin(suffix, false, 0, 20, "name,asc").items()).isNotEmpty();
+    }
+
+    @Test
+    void staleSequentialWritesAndOverlappingUpdatesConflict() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var created = categoryService.create(new CategoryRequest("Versioned " + suffix, "versioned-" + suffix));
+        var updated = categoryService.update(
+                created.id(),
+                new CategoryUpdateRequest(created.name() + " updated", created.slug(), created.version())
+        );
+        assertThat(updated.version()).isGreaterThan(created.version());
+        assertThatThrownBy(() -> categoryService.update(
+                created.id(),
+                new CategoryUpdateRequest("Stale " + suffix, created.slug(), created.version())
+        )).isInstanceOf(ResourceConflictException.class)
+                .extracting(error -> ((ResourceConflictException) error).getCode())
+                .isEqualTo(ResourceConflictException.STALE_VERSION);
+        assertThatThrownBy(() -> categoryService.changeStatus(created.id(), false, created.version()))
+                .isInstanceOf(ResourceConflictException.class)
+                .extracting(error -> ((ResourceConflictException) error).getCode())
+                .isEqualTo(ResourceConflictException.STALE_VERSION);
+
+        long current = categoryService.getAdmin(created.id()).version();
+        AtomicInteger successes = new AtomicInteger();
+        AtomicInteger conflicts = new AtomicInteger();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<?>> futures = List.of(
+                    pool.submit(() -> writeCategory(created.id(), created.slug(), current, "A " + suffix, successes, conflicts)),
+                    pool.submit(() -> writeCategory(created.id(), created.slug(), current, "B " + suffix, successes, conflicts))
+            );
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(successes.get()).isEqualTo(1);
+        assertThat(conflicts.get()).isEqualTo(1);
+    }
+
+    @Test
+    void skuChangeIsRejectedAndConcurrentDuplicatesCannotBothInsert() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var category = categoryService.create(new CategoryRequest("Sku " + suffix, "sku-cat-" + suffix));
+        var product = productService.create(new ProductRequest(
+                "Sku product " + suffix,
+                "sku-product-" + suffix,
+                null,
+                category.id()
+        ));
+        var created = variantService.create(product.id(), new ProductVariantRequest(
+                "KEEP-" + suffix.toUpperCase(),
+                "Keep",
+                new BigDecimal("8.0000"),
+                "USD",
+                null
+        ));
+        assertThatThrownBy(() -> variantService.update(created.id(), new ProductVariantUpdateRequest(
+                "MOVE-" + suffix.toUpperCase(),
+                "Keep",
+                new BigDecimal("8.0000"),
+                "USD",
+                null,
+                created.version()
+        ))).isInstanceOf(ResourceConflictException.class)
+                .extracting(error -> ((ResourceConflictException) error).getCode())
+                .isEqualTo(ResourceConflictException.SKU_IMMUTABLE);
+
+        var kept = variantService.update(created.id(), new ProductVariantUpdateRequest(
+                "keep-" + suffix,
+                "Renamed",
+                new BigDecimal("9.0000"),
+                "USD",
+                null,
+                created.version()
+        ));
+        assertThat(kept.sku()).isEqualTo(created.sku());
+        assertThat(kept.version()).isGreaterThan(created.version());
+
+        String shared = "RACE-" + suffix.toUpperCase();
+        AtomicInteger successes = new AtomicInteger();
+        AtomicInteger conflicts = new AtomicInteger();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<?>> futures = List.of(
+                    pool.submit(() -> createVariant(product.id(), shared, successes, conflicts)),
+                    pool.submit(() -> createVariant(product.id(), shared, successes, conflicts))
+            );
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(successes.get()).isEqualTo(1);
+        assertThat(conflicts.get()).isEqualTo(1);
+        assertThat(variantRepository.existsBySku(shared)).isTrue();
+    }
+
+    @Test
+    void priceFilterRequiresCurrencyAndDoesNotMixCurrencies() {
+        assertThatThrownBy(() -> productService.searchPublicProducts(
+                null, null, new BigDecimal("1"), null, null, 0, 10, "name,asc"
+        )).isInstanceOf(com.umar.ecommerce.catalog.exception.InvalidRequestException.class);
+
+        PageResponse<ProductSummaryResponse> usd = productService.searchAdminProducts(
+                "keyboard",
+                null,
+                true,
+                new BigDecimal("100"),
+                new BigDecimal("120"),
+                "EUR",
+                0,
+                10,
+                "name,asc"
+        );
+        assertThat(usd.items()).isEmpty();
+    }
+
+    private void writeCategory(
+            UUID id,
+            String slug,
+            long version,
+            String name,
+            AtomicInteger successes,
+            AtomicInteger conflicts
+    ) {
+        try {
+            categoryService.update(id, new CategoryUpdateRequest(name, slug, version));
+            successes.incrementAndGet();
+        } catch (RuntimeException exception) {
+            if (isWriteConflict(exception)) {
+                conflicts.incrementAndGet();
+                return;
+            }
+            throw exception;
+        }
+    }
+
+    private void createVariant(UUID productId, String sku, AtomicInteger successes, AtomicInteger conflicts) {
+        try {
+            variantService.create(productId, new ProductVariantRequest(
+                    sku, "Race", new BigDecimal("3.0000"), "USD", null
+            ));
+            successes.incrementAndGet();
+        } catch (RuntimeException exception) {
+            if (exception instanceof ResourceConflictException || exception instanceof DataAccessException || isWriteConflict(exception)) {
+                conflicts.incrementAndGet();
+                return;
+            }
+            throw exception;
+        }
+    }
+
+    private static boolean isWriteConflict(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof ResourceConflictException conflict
+                    && ResourceConflictException.STALE_VERSION.equals(conflict.getCode())) {
+                return true;
+            }
+            if (current instanceof ObjectOptimisticLockingFailureException
+                    || current instanceof jakarta.persistence.OptimisticLockException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private static void bootstrapSchemas() {

@@ -1,6 +1,7 @@
 package com.umar.ecommerce.catalog.service;
 
 import com.umar.ecommerce.catalog.dto.request.ProductRequest;
+import com.umar.ecommerce.catalog.dto.request.ProductUpdateRequest;
 import com.umar.ecommerce.catalog.dto.response.PageResponse;
 import com.umar.ecommerce.catalog.dto.response.ProductResponse;
 import com.umar.ecommerce.catalog.dto.response.ProductSummaryResponse;
@@ -16,14 +17,12 @@ import com.umar.ecommerce.catalog.repository.ProductSpecifications;
 import com.umar.ecommerce.catalog.repository.ProductVariantRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -58,56 +57,53 @@ public class ProductService {
             String categorySlug,
             BigDecimal minPrice,
             BigDecimal maxPrice,
+            String currency,
             int page,
             int size,
             String sort
     ) {
-        validatePage(page, size);
-        BigDecimal normalizedMinPrice = validateOptionalPrice(minPrice, "minPrice");
-        BigDecimal normalizedMaxPrice = validateOptionalPrice(maxPrice, "maxPrice");
-        if (normalizedMinPrice != null
-                && normalizedMaxPrice != null
-                && normalizedMaxPrice.compareTo(normalizedMinPrice) < 0) {
-            throw new InvalidRequestException("maxPrice must be greater than or equal to minPrice");
-        }
-
-        SortSelection sortSelection = parseSort(sort);
-        PageRequest pageRequest = PageRequest.of(
-                page,
-                size,
-                Sort.by(sortSelection.direction(), sortSelection.field())
-        );
-        Page<Product> products = productRepository.findAll(
+        PriceFilter prices = priceFilter(minPrice, maxPrice, currency);
+        return search(
                 ProductSpecifications.publicCatalog(
                         CatalogValidation.normalizeOptionalSearch(search),
                         CatalogValidation.normalizeOptionalCategorySlug(categorySlug),
-                        normalizedMinPrice,
-                        normalizedMaxPrice
+                        prices.min(),
+                        prices.max(),
+                        prices.currency()
                 ),
-                pageRequest
+                true,
+                page,
+                size,
+                sort
         );
+    }
 
-        List<UUID> productIds = products.stream().map(Product::getId).toList();
-        Map<UUID, List<ProductVariant>> variantsByProduct = productIds.isEmpty()
-                ? Map.of()
-                : variantRepository
-                        .findAllByProduct_IdInAndActiveTrueAndProduct_ActiveTrueAndProduct_Category_ActiveTrueOrderByProduct_IdAscPriceAscSkuAsc(
-                                productIds
-                        )
-                        .stream()
-                        .collect(Collectors.groupingBy(
-                                variant -> variant.getProduct().getId(),
-                                LinkedHashMap::new,
-                                Collectors.toList()
-                        ));
-
-        Page<ProductSummaryResponse> responsePage = products.map(product ->
-                mapper.toProductSummaryResponse(
-                        product,
-                        variantsByProduct.getOrDefault(product.getId(), List.of())
-                )
+    public PageResponse<ProductSummaryResponse> searchAdminProducts(
+            String search,
+            UUID categoryId,
+            Boolean active,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String currency,
+            int page,
+            int size,
+            String sort
+    ) {
+        PriceFilter prices = priceFilter(minPrice, maxPrice, currency);
+        return search(
+                ProductSpecifications.adminCatalog(
+                        CatalogValidation.normalizeOptionalSearch(search),
+                        categoryId,
+                        active,
+                        prices.min(),
+                        prices.max(),
+                        prices.currency()
+                ),
+                false,
+                page,
+                size,
+                sort
         );
-        return PageResponse.from(responsePage, sortSelection.contract());
     }
 
     public ProductResponse getPublicProduct(UUID id) {
@@ -122,6 +118,10 @@ public class ProductService {
                 .findBySlugAndActiveTrueAndCategory_ActiveTrue(normalizedSlug)
                 .orElseThrow(() -> productNotFound(normalizedSlug));
         return publicProductResponse(product);
+    }
+
+    public ProductResponse getAdminProduct(UUID id) {
+        return adminProductResponse(requireProduct(id));
     }
 
     @Transactional
@@ -140,8 +140,9 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse update(UUID id, ProductRequest request) {
+    public ProductResponse update(UUID id, ProductUpdateRequest request) {
         Product product = requireProduct(id);
+        VersionGuard.requireCurrent(product.getVersion(), request.expectedVersion());
         String slug = CatalogValidation.normalizeSlug(request.slug(), 160);
         ensureSlugAvailable(slug, id);
         Category category = requireCategory(request.categoryId());
@@ -153,11 +154,54 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse changeStatus(UUID id, boolean active) {
+    public ProductResponse changeStatus(UUID id, boolean active, long expectedVersion) {
         Product product = requireProduct(id);
+        VersionGuard.requireCurrent(product.getVersion(), expectedVersion);
         product.changeActiveStatus(active);
         productRepository.flush();
         return adminProductResponse(product);
+    }
+
+    private PageResponse<ProductSummaryResponse> search(
+            org.springframework.data.jpa.domain.Specification<Product> specification,
+            boolean activeVariantsOnly,
+            int page,
+            int size,
+            String sort
+    ) {
+        CatalogPaging.validatePage(page, size);
+        CatalogPaging.SortSelection sortSelection = CatalogPaging.parseSort(sort, SORT_FIELDS);
+        Page<Product> products = productRepository.findAll(
+                specification,
+                PageRequest.of(page, size, CatalogPaging.toSort(sortSelection))
+        );
+
+        List<UUID> productIds = products.stream().map(Product::getId).toList();
+        Map<UUID, List<ProductVariant>> variantsByProduct = variantsFor(productIds, activeVariantsOnly);
+        Page<ProductSummaryResponse> responsePage = products.map(product ->
+                mapper.toProductSummaryResponse(
+                        product,
+                        variantsByProduct.getOrDefault(product.getId(), List.of())
+                )
+        );
+        return PageResponse.from(responsePage, sortSelection.contract());
+    }
+
+    private Map<UUID, List<ProductVariant>> variantsFor(List<UUID> productIds, boolean activeOnly) {
+        if (productIds.isEmpty()) {
+            return Map.of();
+        }
+        List<ProductVariant> variants = activeOnly
+                ? variantRepository
+                .findAllByProduct_IdInAndActiveTrueAndProduct_ActiveTrueAndProduct_Category_ActiveTrueOrderByProduct_IdAscPriceAscSkuAsc(
+                        productIds
+                )
+                : variantRepository.findAllByProduct_IdInOrderByProduct_IdAscPriceAscSkuAsc(productIds);
+        return variants.stream().collect(Collectors.groupingBy(
+                variant -> variant.getProduct().getId(),
+                LinkedHashMap::new,
+                Collectors.toList()
+        ));
     }
 
     private ProductResponse publicProductResponse(Product product) {
@@ -197,43 +241,29 @@ public class ProductService {
         }
     }
 
-    private static void validatePage(int page, int size) {
-        if (page < 0) {
-            throw new InvalidRequestException("page must be zero or greater");
-        }
-        if (size < 1 || size > 100) {
-            throw new InvalidRequestException("size must be between 1 and 100");
-        }
-    }
-
-    private static BigDecimal validateOptionalPrice(BigDecimal price, String fieldName) {
-        return price == null ? null : CatalogValidation.validatePrice(price, fieldName);
-    }
-
-    private static SortSelection parseSort(String sort) {
-        String value = sort == null || sort.isBlank() ? "name,asc" : sort.trim();
-        String[] parts = value.split(",", -1);
-        if (parts.length != 2) {
+    /**
+     * Price bounds compare the stored numeric amount of variants in one currency.
+     * Amounts are never converted, so a bound without a currency is rejected.
+     */
+    private static PriceFilter priceFilter(BigDecimal minPrice, BigDecimal maxPrice, String currency) {
+        BigDecimal normalizedMinPrice = minPrice == null ? null : CatalogValidation.validatePrice(minPrice, "minPrice");
+        BigDecimal normalizedMaxPrice = maxPrice == null ? null : CatalogValidation.validatePrice(maxPrice, "maxPrice");
+        boolean bounded = normalizedMinPrice != null || normalizedMaxPrice != null;
+        String normalizedCurrency = currency == null || currency.isBlank()
+                ? null
+                : CatalogValidation.normalizeCurrency(currency);
+        if (bounded && normalizedCurrency == null) {
             throw new InvalidRequestException(
-                    "sort must use the format field,direction, for example name,asc"
+                    "currency is required when minPrice or maxPrice is set; "
+                            + "price filters compare the stored amount in that currency and do not convert"
             );
         }
-
-        String field = parts[0].trim();
-        String directionValue = parts[1].trim().toLowerCase(Locale.ROOT);
-        if (!SORT_FIELDS.contains(field)) {
-            throw new InvalidRequestException(
-                    "sort field must be one of name, slug, createdAt, updatedAt"
-            );
+        if (normalizedMinPrice != null
+                && normalizedMaxPrice != null
+                && normalizedMaxPrice.compareTo(normalizedMinPrice) < 0) {
+            throw new InvalidRequestException("maxPrice must be greater than or equal to minPrice");
         }
-        if (!directionValue.equals("asc") && !directionValue.equals("desc")) {
-            throw new InvalidRequestException("sort direction must be asc or desc");
-        }
-
-        Sort.Direction direction = directionValue.equals("asc")
-                ? Sort.Direction.ASC
-                : Sort.Direction.DESC;
-        return new SortSelection(field, direction, field + "," + directionValue);
+        return new PriceFilter(normalizedMinPrice, normalizedMaxPrice, bounded ? normalizedCurrency : null);
     }
 
     private static ResourceNotFoundException productNotFound(String identifier) {
@@ -242,10 +272,6 @@ public class ProductService {
         );
     }
 
-    private record SortSelection(
-            String field,
-            Sort.Direction direction,
-            String contract
-    ) {
+    private record PriceFilter(BigDecimal min, BigDecimal max, String currency) {
     }
 }

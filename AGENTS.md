@@ -10,6 +10,8 @@ Use the WSL2 environment for Java 21, Maven Wrapper, npm, Docker, and Testcontai
 
 Keep domain rules inside owning services and orchestration in order-service. The gateway routes, validates tokens, and applies coarse checks; it does not compose responses or make business decisions. Never access another service database or expose JPA entities through APIs. No shared domain JAR.
 
+Map new or changed Java DTO mappings with MapStruct. Use a Spring `@Mapper(componentModel = "spring")` and a service-local `@MapperConfig` with `unmappedTargetPolicy = ERROR` and constructor injection. Map renamed or nested fields explicitly, ignore excluded targets explicitly, and keep generated sources in `target/`. Do not add a shared mapper JAR, ModelMapper, or a handwritten field-by-field mapper. Mappers convert structure only: services keep validation, identity, version, audit, ownership, and activation rules, and they pass the public or admin variant list so inactive variants cannot leak.
+
 Every service validates tokens itself. Gateway checks do not replace permission/ownership checks. Never grant realm-admin to the application to bypass permission setup. Never use browser identity headers as authentication. Do not enable password grants for tests.
 
 Never commit local secrets, generated realm imports, node_modules, target, or IDE files. Do not delete volumes, reset databases, run broad Docker prune commands, or touch unrelated local services. Application credentials must be scoped to their own databases.

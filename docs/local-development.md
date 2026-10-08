@@ -47,22 +47,60 @@ Run `make help` for the same list.
 | `make run-frontend APP=<storefront-web\|admin-web>` | Runs one Vite dev server in the current terminal. | `cd frontend && npm run dev --workspace @ecommerce/<app>` |
 | `make smoke` | HTTP checks against Keycloak discovery, gateway health, public catalog, and a 401 on an admin endpoint. | `bash scripts/local/smoke.sh` |
 | `make security-check` | Phase 1 acceptance: real PKCE tokens, audience/role isolation, profile ownership, USER_ADMIN anti-elevation, rejected ID tokens and identity headers. Needs infra + gateway, user-service, and catalog. | `bash scripts/local/security-check.sh` |
+| `make catalog-check` | Phase 2 catalog acceptance: anonymous browsing, viewer/creator/editor/customer/dual-role tokens, SKU immutability, stale `expectedVersion`, inactive isolation, direct catalog-service denial, and correlation ids. Needs infra + gateway, user-service, and catalog. | `bash scripts/local/catalog-check.sh` |
 | `make realm-reconcile` | Additive Keycloak realm update from the template. Never deletes users or resets passwords. | `bash scripts/local/realm-reconcile.sh` |
 | `make realm-migrate-portals` | Moves `admin.access` to `api-gateway` and deletes the obsolete portal clients. Keeps users, passwords, and volumes. | `bash scripts/local/migrate-remove-portal-backends.sh` |
 | `make verify` | `check` + `backend-verify` + `frontend-test` + `frontend-build`. `backend-test` is not run separately because `verify` already includes the test phase. Run `make frontend-install` once before. | the four commands above |
 | `make clean` | `backend-clean` + `frontend-clean`. Does not touch `.env`, `.local/`, or Docker volumes. | see above |
 
-Nothing in the Makefile deletes Docker volumes. If you ever need that, do it deliberately with explicit `docker volume` commands, understanding it destroys local databases and the imported realm.
+Nothing in the Makefile deletes Docker volumes. If you ever need that, do it deliberately with the explicit `down -v` command in [section 11](#11-wipe-this-project-and-start-from-scratch), understanding it destroys local databases and the imported realm.
 
 ## 3. First-time setup
 
+Empty checkout, no containers yet. Run in this order:
+
 ```bash
-make bootstrap   # .env + rendered realm (private files, git-ignored)
-make check       # static sanity checks
-make frontend-install
+make bootstrap          # 1. .env with generated secrets + rendered realm (private files, git-ignored)
+make check              # 2. static sanity checks
+make frontend-install   # 3. npm ci for both frontends
+make infra-up           # 4. PostgreSQL :55432 and Keycloak :8180
 ```
 
+Wait until Keycloak has imported the realm (30–60 s on first boot):
+
+```bash
+curl -s http://localhost:8180/realms/ecommerce-local/.well-known/openid-configuration | jq -r .issuer
+# http://localhost:8180/realms/ecommerce-local
+```
+
+Then start the applications, one terminal each (source mode):
+
+```bash
+make run-service SERVICE=catalog-service     # 5.
+make run-service SERVICE=user-service        # 6.
+make run-service SERVICE=api-gateway         # 7.
+make run-frontend APP=storefront-web         # 8. http://localhost:5173
+make run-frontend APP=admin-web              # 9. http://localhost:5174
+make smoke                                   # 10. realm, gateway health, public catalog, 401 on admin
+```
+
+Container mode instead of steps 5–7: `make apps-up`, then steps 8–10. IntelliJ mode: replace step 4 with `bash infrastructure/local/manual-startup/infra.sh up` and follow [manual-startup/README.md](../infrastructure/local/manual-startup/README.md).
+
+The first boot of an empty `postgres-data` volume creates the service databases and roles from `.env` and imports the realm from `.local/keycloak/ecommerce-local-realm.json`. Seed users (see [seed-users.md](seed-users.md)) use `DEMO_USER_PASSWORD` from `.env`.
+
 `bootstrap` is safe to rerun: it reports "Keeping existing .env" and "Keeping existing rendered realm". If `.env` exists but lacks keys, it warns with the key names and leaves the file alone.
+
+### Next time
+
+`.env`, the rendered realm, and the volumes already exist. Do not run `bootstrap` again unless one of those files is missing.
+
+```bash
+make infra-up        # reuses the existing containers and volumes
+```
+
+Then start only the services and frontends you need (steps 5–9 above) and `make smoke` if you want the quick check. Databases, passwords, users, and the realm come from the volume, so a later edit to `.env` or `realm-template.json` does not change them. Additive realm changes: `make realm-reconcile`. If the realm was imported before the portal-backend removal: `make realm-migrate-portals` once, then sign in again.
+
+At the end of the day: Ctrl+C in each service and Vite terminal, then `make infra-down` (containers only; volumes stay).
 
 ## 4. Infrastructure
 
@@ -199,3 +237,27 @@ make clean        # removes backend target/ and frontend dist/; keeps .env, .loc
 ```
 
 Stop source-run services and Vite dev servers with Ctrl+C in their terminals. To remove `node_modules`, run `rm -rf frontend/node_modules` yourself. There is intentionally no target that deletes volumes or `.env`.
+
+## 11. Wipe this project and start from scratch
+
+This deletes every container of Compose project `ecommerce-local-platform` and its three named volumes (`postgres-data`, `redis-data`, `kafka-data`). All local databases, the imported Keycloak realm (users, passwords, role assignments made in the admin console), Redis, and Kafka data are gone afterward. Other Docker projects on the machine are not touched; do not use `docker system prune` or `docker volume prune` for this.
+
+1. Stop Java services and Vite dev servers with Ctrl+C (they are not containers).
+2. Remove containers and volumes:
+
+   ```bash
+   bash scripts/local/compose.sh \
+     --profile apps --profile later --profile cache --profile events --profile mail \
+     down -v --remove-orphans
+   ```
+
+   The profiles make Compose include every service of the file, including the ones started from `manual-startup/`; `--remove-orphans` also removes containers of service names that no longer exist in the file (for example the removed portal backends).
+
+3. Keep `.env`. If you want the empty Keycloak database to import the current `realm-template.json` (rather than the file rendered when you first bootstrapped), re-render the import from the same `.env`:
+
+   ```bash
+   rm -f .local/keycloak/ecommerce-local-realm.json
+   make bootstrap     # keeps .env, renders a new realm file
+   ```
+
+4. Start again: `make infra-up` (or `infra.sh up`), wait for the issuer, then steps 5–10 of [section 3](#3-first-time-setup). The first boot recreates the databases and imports the realm. `make realm-migrate-portals` is not needed after a fresh import of the current template.

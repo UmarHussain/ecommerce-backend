@@ -25,6 +25,7 @@ export function HomePage({ permissions, denied }: { permissions: string[]; denie
         )}
         {permissions.includes('PERM_user.read') ? <Link to="/users">Users</Link> : null}
         {permissions.includes('PERM_role.read') ? <Link to="/roles">Roles</Link> : null}
+        {permissions.includes('PERM_catalog.read') ? <Link to="/catalog/products">Catalog</Link> : null}
       </div>
     </main>
   )

@@ -22,6 +22,7 @@ public class SecurityConfig {
     .requestMatchers("/actuator/health", "/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
     .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").permitAll()
     .requestMatchers(HttpMethod.POST, "/api/v1/catalog/variants/batch").permitAll()
+    .requestMatchers(HttpMethod.GET, "/api/v1/admin/catalog/**").hasAuthority("PERM_catalog.read")
     .requestMatchers(HttpMethod.POST, "/api/v1/admin/catalog/**").hasAuthority("PERM_catalog.create")
     .requestMatchers(HttpMethod.PUT, "/api/v1/admin/catalog/**").hasAuthority("PERM_catalog.update")
     .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/catalog/**").hasAuthority("PERM_catalog.activate")

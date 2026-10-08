@@ -34,4 +34,12 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     List<ProductVariant> findAllByProduct_IdOrderByPriceAscSkuAsc(UUID productId);
+
+    List<ProductVariant> findAllByProduct_IdInOrderByProduct_IdAscPriceAscSkuAsc(Collection<UUID> productIds);
+
+    List<ProductVariant> findTop100ByProduct_IdOrderBySkuAscIdAsc(UUID productId);
+
+    @EntityGraph(attributePaths = "product")
+    @Override
+    Optional<ProductVariant> findById(UUID id);
 }

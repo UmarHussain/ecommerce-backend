@@ -45,8 +45,8 @@ public class ProductVariant extends AuditableEntity {
             String currency,
             String imageUrl
     ) {
-        changeProduct(product);
-        changeSku(sku);
+        assignProduct(product);
+        assignSku(sku);
         updateDetails(name, price, currency, imageUrl);
     }
 
@@ -57,12 +57,44 @@ public class ProductVariant extends AuditableEntity {
         this.imageUrl = normalizeNullableText(imageUrl);
     }
 
+    /**
+     * Assigns the SKU only while it is unset. A different value after creation is rejected.
+     * The same normalized value is ignored so a repeated create-time call cannot mutate it.
+     */
     public void changeSku(String sku) {
-        this.sku = requireText(sku, "sku").toUpperCase(Locale.ROOT);
+        String normalized = requireText(sku, "sku").toUpperCase(Locale.ROOT);
+        if (this.sku != null && !this.sku.equals(normalized)) {
+            throw new IllegalStateException("SKU is immutable after creation");
+        }
+        if (this.sku == null) {
+            this.sku = normalized;
+        }
     }
 
+    /**
+     * Binds the owning product only while it is unset. A variant cannot move to another product.
+     */
     public void changeProduct(Product product) {
-        this.product = Objects.requireNonNull(product, "product must not be null");
+        Product next = Objects.requireNonNull(product, "product must not be null");
+        if (this.product != null && !sameProduct(this.product, next)) {
+            throw new IllegalStateException("A variant cannot be moved to another product");
+        }
+        if (this.product == null) {
+            this.product = next;
+        }
+    }
+
+    private void assignSku(String sku) {
+        changeSku(sku);
+    }
+
+    private void assignProduct(Product product) {
+        changeProduct(product);
+    }
+
+    private static boolean sameProduct(Product current, Product next) {
+        return current == next
+                || (current.getId() != null && current.getId().equals(next.getId()));
     }
 
     public Product getProduct() {

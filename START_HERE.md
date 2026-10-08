@@ -39,7 +39,7 @@ make apps-up
 make smoke
 ```
 
-The public catalog path is gateway → catalog-service. Phase 1 login, profiles, and staff administration are implemented and now go gateway → user-service. `storefront-backend` and `admin-portal-backend` have been removed. Catalog admin screens, cart, checkout, and Kafka Saga are not implemented. After pulling this refactor onto an already imported realm, run `make realm-migrate-portals` and sign in again.
+The public catalog path is gateway → catalog-service. Phase 1 login, profiles, and staff administration are implemented and now go gateway → user-service. Phase 2 catalog administration is implemented on the same path; see [docs/phase-2.md](docs/phase-2.md). `storefront-backend` and `admin-portal-backend` have been removed. Inventory, cart, checkout, and Kafka Saga are not implemented. After pulling the portal-removal refactor onto an already imported realm, run `make realm-migrate-portals` and sign in again.
 
 ## Run the frontends (two terminals)
 
@@ -59,4 +59,4 @@ make frontend-build
 make infra-down        # stops containers, keeps volumes
 ```
 
-See [docs/local-development.md](docs/local-development.md) for every command with its direct equivalent, per-service ports and status, Keycloak credentials lookup, health checks, logs, and known limitations. Seed users and role test cases are listed in [docs/seed-users.md](docs/seed-users.md). Phase 1 review (commands run, implemented flows, limits): [docs/phase-1.md](docs/phase-1.md).
+See [docs/local-development.md](docs/local-development.md) for every command with its direct equivalent, per-service ports and status, Keycloak credentials lookup, health checks, logs, and known limitations. Seed users and role test cases are listed in [docs/seed-users.md](docs/seed-users.md). Phase 1 review: [docs/phase-1.md](docs/phase-1.md). Phase 2 review: [docs/phase-2.md](docs/phase-2.md).

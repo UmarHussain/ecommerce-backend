@@ -45,9 +45,9 @@ Acceptance gate:
 - Backend tests, real Keycloak integration tests, frontend tests/builds, and browser security flows pass.
 - Update progress, service guides, and verification. Explain the flow using actual code. Stop for review.
 
-## Phase 2 — Catalog business slice
+## Phase 2 — Catalog business slice (implemented; stopped for review)
 
-Preserve retained service logic. Add admin read/search APIs (the inherited service currently has public reads and admin writes), validate SKU identity immutability, propagate downstream errors and correlation IDs, and build real catalog screens. Add creator-only vs editor permission tests and concurrency/version-conflict tests. Verify public inactive-data isolation. Gate: catalog administration end to end through the gateway to catalog-service, with real issued tokens.
+Admin catalog reads, immutable SKU, required `expectedVersion`, MapStruct response mapping, explicit gateway routes, and catalog screens in both SPAs. Write-up: [docs/phase-2.md](docs/phase-2.md). Gate: catalog administration through the gateway to catalog-service with real issued tokens (`make catalog-check`).
 
 ## Phase 3 — Inventory administration
 
@@ -55,7 +55,7 @@ Add inventorydb migrations/entities, stock setup, atomic safe adjustments, reaso
 
 ## Phase 4 — Cart and Redis
 
-Implement own carts, quantities, cart versions, catalog cache-aside, TTL/invalidation, degraded-cache behavior. Add Spring Cache annotations intentionally and explain proxy boundaries. Redis never owns stock/order correctness.
+Implement own carts, quantities, cart versions, catalog cache-aside, TTL/invalidation, degraded-cache behavior. Add Resilience4j circuit breaker, retry, and timeouts on synchronous calls. Add Spring Cache annotations intentionally and explain proxy boundaries. Redis never owns stock/order correctness.
 
 ## Phase 5 — Checkout Saga
 

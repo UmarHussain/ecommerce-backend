@@ -33,17 +33,17 @@ class ProductServiceTest {
                 productRepository,
                 variantRepository,
                 categoryRepository,
-                new CatalogMapper()
+                new CatalogMapperImpl()
         );
     }
 
     @Test
     void rejectsInvalidPaginationBeforeQuerying() {
         assertThatThrownBy(() -> service.searchPublicProducts(
-                null, null, null, null, -1, 20, "name,asc"
+                null, null, null, null, null, -1, 20, "name,asc"
         )).isInstanceOf(InvalidRequestException.class);
         assertThatThrownBy(() -> service.searchPublicProducts(
-                null, null, null, null, 0, 101, "name,asc"
+                null, null, null, null, null, 0, 101, "name,asc"
         )).isInstanceOf(InvalidRequestException.class);
 
         verifyNoInteractions(productRepository, variantRepository, categoryRepository);
@@ -56,15 +56,19 @@ class ProductServiceTest {
                 null,
                 new BigDecimal("20"),
                 new BigDecimal("10"),
+                "USD",
                 0,
                 20,
                 "name,asc"
         )).isInstanceOf(InvalidRequestException.class);
         assertThatThrownBy(() -> service.searchPublicProducts(
-                null, null, null, null, 0, 20, "price,asc"
+                null, null, new BigDecimal("10"), null, null, 0, 20, "name,asc"
         )).isInstanceOf(InvalidRequestException.class);
         assertThatThrownBy(() -> service.searchPublicProducts(
-                null, null, null, null, 0, 20, "name,sideways"
+                null, null, null, null, null, 0, 20, "price,asc"
+        )).isInstanceOf(InvalidRequestException.class);
+        assertThatThrownBy(() -> service.searchPublicProducts(
+                null, null, null, null, null, 0, 20, "name,sideways"
         )).isInstanceOf(InvalidRequestException.class);
 
         verifyNoInteractions(productRepository, variantRepository, categoryRepository);

@@ -27,9 +27,30 @@ Because the project name, service names, and volumes are identical, Docker Compo
 From the repository root in WSL2 (prerequisites: `make`, `jq`, `openssl`, Docker, Java 21 — see `docs/local-development.md`):
 
 ```bash
-make bootstrap    # creates .env and .local/keycloak/ecommerce-local-realm.json if missing
+make bootstrap           # creates .env and .local/keycloak/ecommerce-local-realm.json if missing
 make check
+make frontend-install    # once, for the Vite apps
 ```
+
+### First time, step by step
+
+1. `make bootstrap`, `make check`, `make frontend-install` (above).
+2. `bash infrastructure/local/manual-startup/infra.sh up` (section 2) and wait for the issuer curl to answer.
+3. Start `catalog-service`, `user-service`, and `api-gateway` from IntelliJ or `make run-service` (section 3).
+4. `make run-frontend APP=storefront-web` and `make run-frontend APP=admin-web` in two terminals.
+5. `make smoke` (section 4).
+
+The first boot of the empty `postgres-data` volume creates the databases from `.env` and imports the realm from `.local/keycloak/ecommerce-local-realm.json`.
+
+### Next time
+
+`.env`, the rendered realm, and the volumes exist. Skip `make bootstrap` (it would only report "Keeping existing").
+
+```bash
+bash infrastructure/local/manual-startup/infra.sh up    # reuses existing containers and volumes
+```
+
+Then start only the IntelliJ services and Vite apps you need. Databases, passwords, and the realm come from the volume; edits to `.env` or the realm template after the first boot do not change them (additive realm changes: `make realm-reconcile`). At the end, stop the IntelliJ services and run `infra.sh down` (section 5); volumes stay. To erase everything and start again, see section 7.
 
 ## 2. Start the infrastructure
 
@@ -115,8 +136,30 @@ bash infrastructure/local/manual-startup/infra.sh down            # stop infrast
 make infra-down                                                   # same effect, also stops any app containers
 ```
 
-Stop IntelliJ services from the Run tool window. Nothing here deletes volumes; see "Realm lifecycle" in `docs/local-development.md` before you consider doing so by hand.
+Stop IntelliJ services from the Run tool window. Nothing here deletes volumes; see "Realm lifecycle" in `docs/local-development.md` and section 7 below before you consider doing so by hand.
 
 ## 6. Switching between manual and container mode
 
 Do not run the containerised apps (`make apps-up`) while the same services run in IntelliJ: both bind 8090–8097. Stop one side first. The infrastructure containers can stay up throughout.
+
+## 7. Wipe and start from scratch
+
+Deletes every container of Compose project `ecommerce-local-platform` and its volumes `postgres-data`, `redis-data`, `kafka-data`: all local databases, the imported realm (including users and roles changed in the admin console), Redis, and Kafka data. Both Compose files share the same project, so one command covers containers started from either file. Nothing outside this project is touched; do not use `docker system prune` or `docker volume prune`.
+
+1. Stop the IntelliJ services and Vite dev servers.
+2. From the repository root:
+
+   ```bash
+   bash scripts/local/compose.sh \
+     --profile apps --profile later --profile cache --profile events --profile mail \
+     down -v --remove-orphans
+   ```
+
+3. Keep `.env`. Only if you want the fresh Keycloak to import the current `realm-template.json` instead of the file rendered at your first bootstrap:
+
+   ```bash
+   rm -f .local/keycloak/ecommerce-local-realm.json
+   make bootstrap     # keeps .env, renders the realm again
+   ```
+
+4. `bash infrastructure/local/manual-startup/infra.sh up`, wait for the issuer curl, then follow "First time, step by step" from step 3. `make realm-migrate-portals` is not needed after a fresh import of the current template.

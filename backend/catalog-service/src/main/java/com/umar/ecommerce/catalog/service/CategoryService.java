@@ -1,20 +1,28 @@
 package com.umar.ecommerce.catalog.service;
 
 import com.umar.ecommerce.catalog.dto.request.CategoryRequest;
+import com.umar.ecommerce.catalog.dto.request.CategoryUpdateRequest;
 import com.umar.ecommerce.catalog.dto.response.CategoryResponse;
+import com.umar.ecommerce.catalog.dto.response.PageResponse;
 import com.umar.ecommerce.catalog.entity.Category;
 import com.umar.ecommerce.catalog.exception.ResourceConflictException;
 import com.umar.ecommerce.catalog.exception.ResourceNotFoundException;
 import com.umar.ecommerce.catalog.repository.CategoryRepository;
+import com.umar.ecommerce.catalog.repository.CategorySpecifications;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
 public class CategoryService {
+
+    private static final Set<String> SORT_FIELDS = Set.of("name", "slug", "createdAt", "updatedAt");
 
     private final CategoryRepository categoryRepository;
     private final CatalogMapper mapper;
@@ -31,6 +39,29 @@ public class CategoryService {
                 .toList();
     }
 
+    public PageResponse<CategoryResponse> searchAdmin(
+            String search,
+            Boolean active,
+            int page,
+            int size,
+            String sort
+    ) {
+        CatalogPaging.validatePage(page, size);
+        CatalogPaging.SortSelection sortSelection = CatalogPaging.parseSort(sort, SORT_FIELDS);
+        Page<Category> categories = categoryRepository.findAll(
+                CategorySpecifications.adminSearch(
+                        CatalogValidation.normalizeOptionalSearch(search),
+                        active
+                ),
+                PageRequest.of(page, size, CatalogPaging.toSort(sortSelection))
+        );
+        return PageResponse.from(categories.map(mapper::toCategoryResponse), sortSelection.contract());
+    }
+
+    public CategoryResponse getAdmin(UUID id) {
+        return mapper.toCategoryResponse(requireCategory(id));
+    }
+
     @Transactional
     public CategoryResponse create(CategoryRequest request) {
         String slug = CatalogValidation.normalizeSlug(request.slug(), 120);
@@ -41,8 +72,9 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponse update(UUID id, CategoryRequest request) {
+    public CategoryResponse update(UUID id, CategoryUpdateRequest request) {
         Category category = requireCategory(id);
+        VersionGuard.requireCurrent(category.getVersion(), request.expectedVersion());
         String slug = CatalogValidation.normalizeSlug(request.slug(), 120);
         ensureSlugAvailable(slug, id);
 
@@ -52,8 +84,9 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponse changeStatus(UUID id, boolean active) {
+    public CategoryResponse changeStatus(UUID id, boolean active, long expectedVersion) {
         Category category = requireCategory(id);
+        VersionGuard.requireCurrent(category.getVersion(), expectedVersion);
         category.changeActiveStatus(active);
         categoryRepository.flush();
         return mapper.toCategoryResponse(category);

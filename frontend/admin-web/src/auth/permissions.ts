@@ -21,3 +21,19 @@ export function canAssignRoles(permissions: string[] | undefined): boolean {
 export function canCreateUsers(permissions: string[] | undefined): boolean {
   return hasPermission(permissions, 'PERM_user.create')
 }
+
+export function canSeeCatalog(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, 'PERM_catalog.read')
+}
+
+export function canCreateCatalog(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, 'PERM_catalog.create')
+}
+
+export function canUpdateCatalog(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, 'PERM_catalog.update')
+}
+
+export function canActivateCatalog(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, 'PERM_catalog.activate')
+}

@@ -66,7 +66,7 @@ class CatalogControllerTest {
     @Test
     void publicCatalogIsAnonymousAndUsesStablePageEnvelope() throws Exception {
         when(productService.searchPublicProducts(
-                any(), any(), any(), any(), any(Integer.class), any(Integer.class), any()
+                any(), any(), any(), any(), any(), any(Integer.class), any(Integer.class), any()
         )).thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0, true, true, "name,asc"));
 
         mockMvc.perform(get("/api/v1/catalog/products")
@@ -85,6 +85,7 @@ class CatalogControllerTest {
                 eq("electronics"),
                 eq(new BigDecimal("10.0000")),
                 eq(new BigDecimal("120.0000")),
+                eq("USD"),
                 eq(1),
                 eq(5),
                 eq("slug,desc")
@@ -95,6 +96,7 @@ class CatalogControllerTest {
                         .param("category", "electronics")
                         .param("minPrice", "10.0000")
                         .param("maxPrice", "120.0000")
+                        .param("currency", "USD")
                         .param("page", "1")
                         .param("size", "5")
                         .param("sort", "slug,desc"))
@@ -115,14 +117,14 @@ class CatalogControllerTest {
                 .andExpect(jsonPath("$.code").value("CATALOG_VALIDATION_FAILED"));
 
         verify(productService, never()).searchPublicProducts(
-                any(), any(), any(), any(), any(Integer.class), any(Integer.class), any()
+                any(), any(), any(), any(), any(), any(Integer.class), any(Integer.class), any()
         );
     }
 
     @Test
     void publicSearchRejectsDisallowedSortWithProblemDetails() throws Exception {
         when(productService.searchPublicProducts(
-                any(), any(), any(), any(), any(Integer.class), any(Integer.class), eq("price,asc")
+                any(), any(), any(), any(), any(), any(Integer.class), any(Integer.class), eq("price,asc")
         )).thenThrow(new InvalidRequestException(
                 "sort field must be one of name, slug, createdAt, updatedAt"
         ));
@@ -235,7 +237,7 @@ class CatalogControllerTest {
         );
         when(categoryService.create(any())).thenReturn(created);
         when(categoryService.update(eq(id), any())).thenReturn(created);
-        when(categoryService.changeStatus(eq(id), eq(false))).thenReturn(
+        when(categoryService.changeStatus(eq(id), eq(false), eq(0L))).thenReturn(
                 new CategoryResponse(id, "Electronics", "electronics", false, now, now, 1)
         );
 
@@ -256,14 +258,14 @@ class CatalogControllerTest {
                         .with(jwt().authorities(new SimpleGrantedAuthority("PERM_catalog.create"), new SimpleGrantedAuthority("PERM_catalog.update"), new SimpleGrantedAuthority("PERM_catalog.activate")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Electronics","slug":"electronics"}
+                                {"name":"Electronics","slug":"electronics","expectedVersion":0}
                                 """))
                 .andExpect(status().isOk());
 
         mockMvc.perform(patch("/api/v1/admin/catalog/categories/{id}/status", id)
                         .with(jwt().authorities(new SimpleGrantedAuthority("PERM_catalog.create"), new SimpleGrantedAuthority("PERM_catalog.update"), new SimpleGrantedAuthority("PERM_catalog.activate")))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"active\":false}"))
+                        .content("{\"active\":false,\"expectedVersion\":0}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
     }
@@ -279,6 +281,56 @@ class CatalogControllerTest {
                 .andExpect(jsonPath("$.code").value("CATALOG_VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("skus"))
                 .andExpect(jsonPath("$.correlationId").isNotEmpty());
+    }
+
+    @Test
+    void adminReadRequiresCatalogRead() throws Exception {
+        when(categoryService.searchAdmin(any(), any(), any(Integer.class), any(Integer.class), any()))
+                .thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0, true, true, "name,asc"));
+
+        mockMvc.perform(get("/api/v1/admin/catalog/categories"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/admin/catalog/categories")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("PERM_catalog.create"))))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/admin/catalog/categories")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("PERM_catalog.read"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray());
+    }
+
+    @Test
+    void updateWithoutExpectedVersionIsRejected() throws Exception {
+        mockMvc.perform(put("/api/v1/admin/catalog/categories/{id}", UUID.randomUUID())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("PERM_catalog.update")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Electronics","slug":"electronics"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CATALOG_VALIDATION_FAILED"));
+
+        verify(categoryService, never()).update(any(), any());
+    }
+
+    @Test
+    void createIgnoresActivationInThePayload() throws Exception {
+        UUID id = UUID.randomUUID();
+        Instant now = Instant.now();
+        when(categoryService.create(any())).thenReturn(
+                new CategoryResponse(id, "Electronics", "electronics", true, now, now, 0)
+        );
+
+        mockMvc.perform(post("/api/v1/admin/catalog/categories")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("PERM_catalog.create")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Electronics","slug":"electronics","active":false}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.active").value(true));
     }
 
     private static ProductResponse productResponse(UUID id, Instant now) {

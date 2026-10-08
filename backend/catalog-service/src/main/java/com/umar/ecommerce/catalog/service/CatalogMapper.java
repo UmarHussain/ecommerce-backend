@@ -8,85 +8,50 @@ import com.umar.ecommerce.catalog.dto.response.VariantPriceResponse;
 import com.umar.ecommerce.catalog.entity.Category;
 import com.umar.ecommerce.catalog.entity.Product;
 import com.umar.ecommerce.catalog.entity.ProductVariant;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
 import java.util.List;
 
-@Component
-public class CatalogMapper {
+/**
+ * Structural response mapping only. Callers choose the variant list so a public response cannot
+ * pick up inactive variants that happen to be loaded on the product. This mapper does not load
+ * relationships, apply versions, or change activation.
+ */
+@Mapper(componentModel = "spring", config = CatalogMapperConfig.class)
+public interface CatalogMapper {
 
-    public CategoryResponse toCategoryResponse(Category category) {
-        return new CategoryResponse(
-                category.getId(),
-                category.getName(),
-                category.getSlug(),
-                category.isActive(),
-                category.getCreatedAt(),
-                category.getUpdatedAt(),
-                category.getVersion()
-        );
-    }
+    CategoryResponse toCategoryResponse(Category category);
 
-    public ProductVariantResponse toVariantResponse(ProductVariant variant) {
-        return new ProductVariantResponse(
-                variant.getId(),
-                variant.getProduct().getId(),
-                variant.getSku(),
-                variant.getName(),
-                variant.getPrice(),
-                variant.getCurrency(),
-                variant.getImageUrl(),
-                variant.isActive(),
-                variant.getCreatedAt(),
-                variant.getUpdatedAt(),
-                variant.getVersion()
-        );
-    }
+    @Named("variantResponse")
+    @Mapping(target = "productId", source = "product.id")
+    ProductVariantResponse toVariantResponse(ProductVariant variant);
 
-    public VariantPriceResponse toVariantPriceResponse(ProductVariant variant) {
-        return new VariantPriceResponse(
-                variant.getId(),
-                variant.getSku(),
-                variant.getName(),
-                variant.getPrice(),
-                variant.getCurrency(),
-                variant.getImageUrl()
-        );
-    }
+    @Named("variantPrice")
+    VariantPriceResponse toVariantPriceResponse(ProductVariant variant);
 
-    public ProductResponse toProductResponse(
-            Product product,
-            List<ProductVariant> variants
-    ) {
-        return new ProductResponse(
-                product.getId(),
-                product.getName(),
-                product.getSlug(),
-                product.getDescription(),
-                toCategoryResponse(product.getCategory()),
-                variants.stream().map(this::toVariantResponse).toList(),
-                product.isActive(),
-                product.getCreatedAt(),
-                product.getUpdatedAt(),
-                product.getVersion()
-        );
-    }
+    @Mapping(target = "id", source = "product.id")
+    @Mapping(target = "name", source = "product.name")
+    @Mapping(target = "slug", source = "product.slug")
+    @Mapping(target = "description", source = "product.description")
+    @Mapping(target = "category", source = "product.category")
+    @Mapping(target = "variants", source = "variants", qualifiedByName = "variantResponse")
+    @Mapping(target = "active", source = "product.active")
+    @Mapping(target = "createdAt", source = "product.createdAt")
+    @Mapping(target = "updatedAt", source = "product.updatedAt")
+    @Mapping(target = "version", source = "product.version")
+    ProductResponse toProductResponse(Product product, List<ProductVariant> variants);
 
-    public ProductSummaryResponse toProductSummaryResponse(
-            Product product,
-            List<ProductVariant> variants
-    ) {
-        return new ProductSummaryResponse(
-                product.getId(),
-                product.getName(),
-                product.getSlug(),
-                product.getDescription(),
-                toCategoryResponse(product.getCategory()),
-                variants.stream().map(this::toVariantPriceResponse).toList(),
-                product.isActive(),
-                product.getCreatedAt(),
-                product.getUpdatedAt(),
-                product.getVersion()
-        );
-    }
+    @Mapping(target = "id", source = "product.id")
+    @Mapping(target = "name", source = "product.name")
+    @Mapping(target = "slug", source = "product.slug")
+    @Mapping(target = "description", source = "product.description")
+    @Mapping(target = "category", source = "product.category")
+    @Mapping(target = "variants", source = "variants", qualifiedByName = "variantPrice")
+    @Mapping(target = "active", source = "product.active")
+    @Mapping(target = "createdAt", source = "product.createdAt")
+    @Mapping(target = "updatedAt", source = "product.updatedAt")
+    @Mapping(target = "version", source = "product.version")
+    ProductSummaryResponse toProductSummaryResponse(Product product, List<ProductVariant> variants);
 }
