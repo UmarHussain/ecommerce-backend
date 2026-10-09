@@ -11,6 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
         "DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/unused",
         "DATABASE_USERNAME=unused",
         "DATABASE_PASSWORD=unused",
+        "spring.cache.type=none",
         "spring.autoconfigure.exclude="
                 + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"

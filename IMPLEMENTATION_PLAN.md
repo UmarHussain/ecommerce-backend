@@ -53,9 +53,9 @@ Admin catalog reads, immutable SKU, required `expectedVersion`, MapStruct respon
 
 Stock setup, signed adjustments, immutable history, catalog SKU checks at setup, and inventory screens. Write-up: [docs/phase-3.md](docs/phase-3.md). Gate: permission and concurrent adjustment tests with PostgreSQL, plus `make inventory-check` through the gateway.
 
-## Phase 4 — Cart and Redis
+## Phase 4 — Cart and Redis (implemented; stopped for review)
 
-Implement own carts, quantities, cart versions, catalog cache-aside, TTL/invalidation, degraded-cache behavior. Add Resilience4j circuit breaker, retry, and timeouts on synchronous calls. Add Spring Cache annotations intentionally and explain proxy boundaries. Redis never owns stock/order correctness.
+Own carts, absolute quantities, aggregate versions, public catalog cache-aside, and Resilience4j around the catalog HTTP adapters. Write-up: [docs/phase-4.md](docs/phase-4.md). Redis is not the cart or stock authority. Gate: `make cart-check` and `make cache-check`.
 
 ## Phase 5 — Checkout Saga
 

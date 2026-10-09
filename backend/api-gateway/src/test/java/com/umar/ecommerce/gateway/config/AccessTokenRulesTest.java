@@ -63,6 +63,31 @@ class AccessTokenRulesTest {
     }
 
     @Test
+    void cartRolesComeOnlyFromTheCartClient() {
+        Jwt customer = Jwt.withTokenValue("fixture").header("alg", "RS256").subject("customer")
+                .claim("resource_access", Map.of(
+                        "cart-service", Map.of("roles", List.of("cart.read_own", "cart.write_own", "order.create")),
+                        "api-gateway", Map.of("roles", List.of("admin.access"))
+                ))
+                .build();
+        Set<String> customerAuthorities = AccessTokenRules.coarseAuthorities(customer).stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+        assertEquals(Set.of("PERM_cart.read_own", "PERM_cart.write_own", "PERM_admin.access"), customerAuthorities);
+
+        Jwt staff = Jwt.withTokenValue("fixture").header("alg", "RS256").subject("staff")
+                .claim("resource_access", Map.of(
+                        "api-gateway", Map.of("roles", List.of("admin.access")),
+                        "catalog-service", Map.of("roles", List.of("cart.read_own"))
+                ))
+                .build();
+        Set<String> staffAuthorities = AccessTokenRules.coarseAuthorities(staff).stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+        assertEquals(Set.of("PERM_admin.access"), staffAuthorities);
+    }
+
+    @Test
     void retiredPortalClientStillCarriesOnlyPortalEntry() {
         Jwt jwt = Jwt.withTokenValue("fixture").header("alg", "RS256").subject("staff")
                 .claim("resource_access", Map.of(

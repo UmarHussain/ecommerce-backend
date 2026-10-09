@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CatalogPage } from './CatalogPage'
 import { ProductPage } from './ProductPage'
 
+vi.mock('react-oidc-context', () => ({
+  useAuth: () => ({
+    isAuthenticated: false,
+    user: null,
+    signinRedirect: vi.fn(),
+  }),
+}))
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -51,6 +59,7 @@ describe('storefront catalog', () => {
       </MemoryRouter>,
     )
     expect(await screen.findByRole('heading', { name: 'Headphones' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign in to add to cart' })).toBeInTheDocument()
     expect(screen.getByText('79.9900 USD')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('radio', { name: /White/ }))
     expect(screen.getByText('81.0000 USD')).toBeInTheDocument()

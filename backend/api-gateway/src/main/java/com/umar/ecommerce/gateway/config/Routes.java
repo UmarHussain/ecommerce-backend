@@ -15,7 +15,8 @@ public class Routes {
             RouteLocatorBuilder builder,
             @Value("${USER_SERVICE_URL:http://localhost:8093}") String users,
             @Value("${CATALOG_SERVICE_URL:http://localhost:8094}") String catalog,
-            @Value("${INVENTORY_SERVICE_URL:http://localhost:8095}") String inventory
+            @Value("${INVENTORY_SERVICE_URL:http://localhost:8095}") String inventory,
+            @Value("${CART_SERVICE_URL:http://localhost:8096}") String cart
     ) {
         return builder.routes()
                 .route("public-catalog-product-slug", route -> route
@@ -60,6 +61,18 @@ public class Routes {
                                 "/api/v1/store/catalog/categories",
                                 "/api/v1/catalog/categories"))
                         .uri(catalog))
+                .route("customer-cart-item", route -> route
+                        .path("/api/v1/store/cart/items/{sku}")
+                        .and().method("PUT", "DELETE")
+                        .filters(filter -> filter.rewritePath(
+                                "/api/v1/store/cart/items/(?<sku>[^/]+)",
+                                "/api/v1/cart/items/${sku}"))
+                        .uri(cart))
+                .route("customer-cart", route -> route
+                        .path("/api/v1/store/cart")
+                        .and().method("GET", "DELETE")
+                        .filters(filter -> filter.rewritePath("/api/v1/store/cart", "/api/v1/cart"))
+                        .uri(cart))
                 .route("customer-me", route -> route
                         .path("/api/v1/store/me")
                         .and().method("GET", "PATCH")

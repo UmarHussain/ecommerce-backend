@@ -97,6 +97,7 @@ services:
       USER_SERVICE_URL: http://user-service:8093
       CATALOG_SERVICE_URL: http://catalog-service:8094
       INVENTORY_SERVICE_URL: http://inventory-service:8095
+      CART_SERVICE_URL: http://cart-service:8096
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,6 +155,8 @@ services:
       DATABASE_USERNAME: catalog_app
       DATABASE_PASSWORD: ${CATALOG_DB_PASSWORD:?Run make bootstrap}
       DATABASE_SCHEMA: catalog
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
       SPRING_PROFILES_ACTIVE: local
     depends_on:
       postgres:
@@ -197,6 +200,12 @@ services:
       SERVER_PORT: '8096'
       OIDC_ISSUER_URI: http://localhost:8180/realms/ecommerce-local
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/ecommerce-local/protocol/openid-connect/certs
+      DATABASE_URL: jdbc:postgresql://postgres:5432/cartdb
+      DATABASE_USERNAME: cart_app
+      DATABASE_PASSWORD: ${CART_DB_PASSWORD:?Run make bootstrap}
+      DATABASE_SCHEMA: cart
+      CATALOG_SERVICE_URL: http://catalog-service:8094
+      SPRING_PROFILES_ACTIVE: local
     depends_on:
       postgres:
         condition: service_healthy

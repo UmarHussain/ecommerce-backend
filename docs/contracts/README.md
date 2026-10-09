@@ -10,6 +10,10 @@ Implemented: catalog OpenAPI annotations and user-service OpenAPI. The gateway r
 | `GET /api/v1/store/catalog/products/{id}/variants` | public | catalog-service `GET /api/v1/catalog/products/{id}/variants` |
 | `POST /api/v1/store/catalog/variants/batch` | public | catalog-service `POST /api/v1/catalog/variants/batch` |
 | `GET /api/v1/store/catalog/categories` | public | catalog-service `GET /api/v1/catalog/categories` |
+| `GET /api/v1/store/cart` | `PERM_cart.read_own` | cart-service `GET /api/v1/cart` |
+| `PUT /api/v1/store/cart/items/{sku}` | `PERM_cart.write_own` | cart-service `PUT /api/v1/cart/items/{sku}` |
+| `DELETE /api/v1/store/cart/items/{sku}` | `PERM_cart.write_own` | cart-service, same item path; query `expectedVersion` is required |
+| `DELETE /api/v1/store/cart` | `PERM_cart.write_own` | cart-service `DELETE /api/v1/cart`; query `expectedVersion` is required |
 | `GET/PATCH /api/v1/store/me` | `PERM_profile.read_own` / `update_own` | user-service `/api/v1/users/me` |
 | `POST /api/v1/store/me/addresses` and `PUT/DELETE .../{addressId}` | `PERM_profile.update_own` | user-service `/api/v1/users/me/addresses...` |
 | `GET /api/v1/admin/me` | `PERM_admin.access` | user-service. Profile is a JSON object, not a string |
@@ -45,7 +49,11 @@ Example stale update:
 { "title": "Conflict", "status": 409, "code": "CATALOG_STALE_VERSION", "detail": "Catalog data changed since it was loaded; reload and review the current values", "correlationId": "..." }
 ```
 
-When catalog-service cannot be reached, the gateway returns `503` `GATEWAY_DOWNSTREAM_UNAVAILABLE`, `504` `GATEWAY_DOWNSTREAM_TIMEOUT`, or `502` `GATEWAY_DOWNSTREAM_ERROR`, with the same correlation id. A response catalog-service already wrote, including problem JSON, is forwarded unchanged. The same gateway mapping applies when inventory-service cannot be reached.
+When catalog-service cannot be reached, the gateway returns `503` `GATEWAY_DOWNSTREAM_UNAVAILABLE`, `504` `GATEWAY_DOWNSTREAM_TIMEOUT`, or `502` `GATEWAY_DOWNSTREAM_ERROR`, with the same correlation id. A response catalog-service already wrote, including problem JSON, is forwarded unchanged. The same gateway mapping applies when inventory-service or cart-service cannot be reached.
+
+### Cart
+
+`PUT /api/v1/store/cart/items/{sku}` body is `{ "quantity": 1, "expectedVersion": 0 }`. Quantity is absolute, from 1 to 99. The service stores the catalog SKU, variant id, and price. A stale `expectedVersion` is `409` `CART_STALE_VERSION` and leaves the line unchanged. Details and the other cart error codes: [phase-4.md](../phase-4.md).
 
 ### Inventory setup, adjustments, and history
 

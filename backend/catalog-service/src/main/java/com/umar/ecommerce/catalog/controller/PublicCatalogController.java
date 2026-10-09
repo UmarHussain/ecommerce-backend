@@ -7,8 +7,7 @@ import com.umar.ecommerce.catalog.dto.response.PageResponse;
 import com.umar.ecommerce.catalog.dto.response.ProductResponse;
 import com.umar.ecommerce.catalog.dto.response.ProductSummaryResponse;
 import com.umar.ecommerce.catalog.dto.response.ProductVariantResponse;
-import com.umar.ecommerce.catalog.service.CategoryService;
-import com.umar.ecommerce.catalog.service.ProductService;
+import com.umar.ecommerce.catalog.cache.PublicBrowseFacade;
 import com.umar.ecommerce.catalog.service.ProductVariantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,18 +36,12 @@ import java.util.UUID;
 @Tag(name = "Public Catalog", description = "Active public catalog browsing")
 public class PublicCatalogController {
 
-    private final ProductService productService;
+    private final PublicBrowseFacade browse;
     private final ProductVariantService variantService;
-    private final CategoryService categoryService;
 
-    public PublicCatalogController(
-            ProductService productService,
-            ProductVariantService variantService,
-            CategoryService categoryService
-    ) {
-        this.productService = productService;
+    public PublicCatalogController(PublicBrowseFacade browse, ProductVariantService variantService) {
+        this.browse = browse;
         this.variantService = variantService;
-        this.categoryService = categoryService;
     }
 
     @GetMapping("/products")
@@ -67,7 +60,7 @@ public class PublicCatalogController {
             @Parameter(description = "Allowlisted field and direction, for example name,asc")
             @RequestParam(defaultValue = "name,asc") String sort
     ) {
-        return productService.searchPublicProducts(
+        return browse.searchProducts(
                 search,
                 categorySlug,
                 minPrice,
@@ -86,7 +79,7 @@ public class PublicCatalogController {
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
     public ProductResponse getProduct(@PathVariable UUID id) {
-        return productService.getPublicProduct(id);
+        return browse.getProduct(id);
     }
 
     @GetMapping("/products/slug/{slug}")
@@ -96,14 +89,14 @@ public class PublicCatalogController {
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
     public ProductResponse getProductBySlug(@PathVariable String slug) {
-        return productService.getPublicProductBySlug(slug);
+        return browse.getProductBySlug(slug);
     }
 
     @GetMapping("/categories")
     @Operation(summary = "List active categories")
     @ApiResponse(responseCode = "200", description = "Categories returned")
     public List<CategoryResponse> listCategories() {
-        return categoryService.listActiveCategories();
+        return browse.listCategories();
     }
 
     @GetMapping("/products/{productId}/variants")
@@ -115,7 +108,7 @@ public class PublicCatalogController {
     public List<ProductVariantResponse> listProductVariants(
             @PathVariable UUID productId
     ) {
-        return variantService.listPublicVariants(productId);
+        return browse.listVariants(productId);
     }
 
     @PostMapping("/variants/batch")

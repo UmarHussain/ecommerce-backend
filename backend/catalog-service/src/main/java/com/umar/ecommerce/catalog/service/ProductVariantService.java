@@ -1,5 +1,6 @@
 package com.umar.ecommerce.catalog.service;
 
+import com.umar.ecommerce.catalog.cache.PublicCatalogChanged;
 import com.umar.ecommerce.catalog.dto.request.BatchVariantRequest;
 import com.umar.ecommerce.catalog.dto.request.ProductVariantRequest;
 import com.umar.ecommerce.catalog.dto.request.ProductVariantUpdateRequest;
@@ -12,6 +13,7 @@ import com.umar.ecommerce.catalog.exception.ResourceConflictException;
 import com.umar.ecommerce.catalog.exception.ResourceNotFoundException;
 import com.umar.ecommerce.catalog.repository.ProductRepository;
 import com.umar.ecommerce.catalog.repository.ProductVariantRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,15 +31,18 @@ public class ProductVariantService {
     private final ProductVariantRepository variantRepository;
     private final ProductRepository productRepository;
     private final CatalogMapper mapper;
+    private final ApplicationEventPublisher events;
 
     public ProductVariantService(
             ProductVariantRepository variantRepository,
             ProductRepository productRepository,
-            CatalogMapper mapper
+            CatalogMapper mapper,
+            ApplicationEventPublisher events
     ) {
         this.variantRepository = variantRepository;
         this.productRepository = productRepository;
         this.mapper = mapper;
+        this.events = events;
     }
 
     public List<ProductVariantResponse> listPublicVariants(UUID productId) {
@@ -112,6 +117,7 @@ public class ProductVariantService {
                 input.currency(),
                 input.imageUrl()
         ));
+        events.publishEvent(new PublicCatalogChanged("variant-create"));
         return mapper.toVariantResponse(variant);
     }
 
@@ -140,6 +146,7 @@ public class ProductVariantService {
                 input.imageUrl()
         );
         variantRepository.flush();
+        events.publishEvent(new PublicCatalogChanged("variant-update"));
         return mapper.toVariantResponse(variant);
     }
 
@@ -149,6 +156,7 @@ public class ProductVariantService {
         VersionGuard.requireCurrent(variant.getVersion(), expectedVersion);
         variant.changeActiveStatus(active);
         variantRepository.flush();
+        events.publishEvent(new PublicCatalogChanged("variant-status"));
         return mapper.toVariantResponse(variant);
     }
 

@@ -40,7 +40,8 @@ class ProductVariantServiceTest {
         service = new ProductVariantService(
                 variantRepository,
                 productRepository,
-                new CatalogMapperImpl()
+                new CatalogMapperImpl(),
+                event -> { }
         );
     }
 

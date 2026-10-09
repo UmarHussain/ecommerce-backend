@@ -79,6 +79,7 @@ class CatalogPostgresIT {
         registry.add("spring.flyway.default-schema", () -> "catalog");
         registry.add("spring.flyway.schemas", () -> "catalog");
         registry.add("spring.jpa.properties.hibernate.default_schema", () -> "catalog");
+        registry.add("spring.cache.type", () -> "none");
     }
 
     @Autowired

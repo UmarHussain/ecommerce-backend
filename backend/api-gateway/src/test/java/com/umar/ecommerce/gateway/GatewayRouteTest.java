@@ -43,6 +43,7 @@ class GatewayRouteTest {
         registry.add("USER_SERVICE_URL", () -> base);
         registry.add("CATALOG_SERVICE_URL", () -> base);
         registry.add("INVENTORY_SERVICE_URL", () -> base);
+        registry.add("CART_SERVICE_URL", () -> base);
         registry.add("platform.gateway.rate-limit.enabled", () -> "false");
         registry.add("platform.security.issuer-uri", () -> "http://localhost:8180/realms/ecommerce-local");
         registry.add("platform.security.jwk-set-uri", () -> base + "/jwks");
@@ -224,6 +225,37 @@ class GatewayRouteTest {
                 .expectHeader().contentType("application/problem+json")
                 .expectBody()
                 .jsonPath("$.code").isEqualTo("CATALOG_STALE_VERSION");
+    }
+
+    @Test
+    void customerCartRoutesRequireCartRolesAndRewrite() {
+        client.get().uri("/api/v1/store/cart")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer customer-token")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        when(jwtDecoder.decode(anyString())).thenReturn(Mono.just(jwt(Map.of(
+                "cart-service", List.of("cart.read_own", "cart.write_own", "user.read")
+        ))));
+        client.put().uri("/api/v1/store/cart/items/HEADPHONES-BLK?expectedVersion=0")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer customer-token")
+                .header("X-Correlation-ID", "corr-cart-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"quantity\":1,\"expectedVersion\":0,\"owner\":\"forged\",\"unitPrice\":\"1.00\"}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals("X-Correlation-ID", "corr-cart-1");
+        org.junit.jupiter.api.Assertions.assertEquals("PUT", LAST.get().method());
+        org.junit.jupiter.api.Assertions.assertEquals("/api/v1/cart/items/HEADPHONES-BLK", LAST.get().path());
+        org.junit.jupiter.api.Assertions.assertEquals("expectedVersion=0", LAST.get().query());
+        org.junit.jupiter.api.Assertions.assertEquals("Bearer customer-token", LAST.get().authorization());
+
+        client.delete().uri("/api/v1/store/cart?expectedVersion=1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer customer-token")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals("DELETE", LAST.get().method());
+        org.junit.jupiter.api.Assertions.assertEquals("/api/v1/cart", LAST.get().path());
     }
 
     @Test

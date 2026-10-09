@@ -104,6 +104,9 @@ class InventoryPostgresIT {
         registry.add("platform.catalog.connect-timeout", () -> "500ms");
         registry.add("platform.catalog.read-timeout", () -> "500ms");
         registry.add("platform.catalog.pool-acquire-timeout", () -> "500ms");
+        registry.add("resilience4j.retry.instances.inventoryCatalog.waitDuration", () -> "1ms");
+        registry.add("resilience4j.retry.instances.inventoryCatalog.enableExponentialBackoff", () -> "false");
+        registry.add("resilience4j.retry.instances.inventoryCatalog.enableRandomizedWait", () -> "false");
     }
 
     private static final AtomicBoolean INSERT_LISTENER = new AtomicBoolean();
@@ -249,7 +252,7 @@ class InventoryPostgresIT {
                 new SetupStockRequest(UUID.randomUUID(), 1, ReasonCode.OPENING_BALANCE, null, null)
         )).extracting(error -> ((InventoryProblem) error).code())
                 .isEqualTo(InventoryProblem.CATALOG_READ_REQUIRED);
-        assertThat(CATALOG_HITS.get()).isEqualTo(hits + 11);
+        assertThat(CATALOG_HITS.get()).isEqualTo(hits + 13);
         assertThat(stockCount()).isEqualTo(before);
     }
 

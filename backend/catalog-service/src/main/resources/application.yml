@@ -37,12 +37,32 @@ spring:
         jdbc:
           time_zone: UTC
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:56379}
+      timeout: ${REDIS_COMMAND_TIMEOUT:200ms}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:200ms}
+      repositories:
+        enabled: false
+  cache:
+    type: ${CATALOG_CACHE_TYPE:redis}
+
 platform:
   security:
     issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8180/realms/ecommerce-local}
     jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8180/realms/ecommerce-local/protocol/openid-connect/certs}
     audience: catalog-service
+  catalog-cache:
+    categories-ttl: ${CATALOG_CACHE_CATEGORIES_TTL:60s}
+    products-ttl: ${CATALOG_CACHE_PRODUCTS_TTL:45s}
+    product-ttl: ${CATALOG_CACHE_PRODUCT_TTL:45s}
+    variants-ttl: ${CATALOG_CACHE_VARIANTS_TTL:30s}
+    ttl-jitter: ${CATALOG_CACHE_TTL_JITTER:5s}
 management:
+  health:
+    redis:
+      enabled: false
   endpoints:
     web:
       exposure:

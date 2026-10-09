@@ -1,5 +1,6 @@
 package com.umar.ecommerce.catalog.service;
 
+import com.umar.ecommerce.catalog.cache.PublicCatalogChanged;
 import com.umar.ecommerce.catalog.dto.request.ProductRequest;
 import com.umar.ecommerce.catalog.dto.request.ProductUpdateRequest;
 import com.umar.ecommerce.catalog.dto.response.PageResponse;
@@ -15,6 +16,7 @@ import com.umar.ecommerce.catalog.repository.CategoryRepository;
 import com.umar.ecommerce.catalog.repository.ProductRepository;
 import com.umar.ecommerce.catalog.repository.ProductSpecifications;
 import com.umar.ecommerce.catalog.repository.ProductVariantRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -39,17 +41,20 @@ public class ProductService {
     private final ProductVariantRepository variantRepository;
     private final CategoryRepository categoryRepository;
     private final CatalogMapper mapper;
+    private final ApplicationEventPublisher events;
 
     public ProductService(
             ProductRepository productRepository,
             ProductVariantRepository variantRepository,
             CategoryRepository categoryRepository,
-            CatalogMapper mapper
+            CatalogMapper mapper,
+            ApplicationEventPublisher events
     ) {
         this.productRepository = productRepository;
         this.variantRepository = variantRepository;
         this.categoryRepository = categoryRepository;
         this.mapper = mapper;
+        this.events = events;
     }
 
     public PageResponse<ProductSummaryResponse> searchPublicProducts(
@@ -136,6 +141,7 @@ public class ProductService {
                 request.description(),
                 category
         ));
+        events.publishEvent(new PublicCatalogChanged("product-create"));
         return mapper.toProductResponse(product, List.of());
     }
 
@@ -150,6 +156,7 @@ public class ProductService {
         product.updateDetails(request.name(), slug, request.description());
         product.changeCategory(category);
         productRepository.flush();
+        events.publishEvent(new PublicCatalogChanged("product-update"));
         return adminProductResponse(product);
     }
 
@@ -159,6 +166,7 @@ public class ProductService {
         VersionGuard.requireCurrent(product.getVersion(), expectedVersion);
         product.changeActiveStatus(active);
         productRepository.flush();
+        events.publishEvent(new PublicCatalogChanged("product-status"));
         return adminProductResponse(product);
     }
 

@@ -25,6 +25,8 @@ if [[ "$service" == catalog-service ]]; then
   export DATABASE_USERNAME=catalog_app
   export DATABASE_PASSWORD="$CATALOG_DB_PASSWORD"
   export DATABASE_SCHEMA=catalog
+  export REDIS_HOST="${REDIS_HOST:-localhost}"
+  export REDIS_PORT="${REDIS_PORT:-56379}"
   export SPRING_PROFILES_ACTIVE=local
 fi
 if [[ "$service" == user-service ]]; then
@@ -46,10 +48,19 @@ if [[ "$service" == inventory-service ]]; then
   export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
   export SPRING_PROFILES_ACTIVE=local
 fi
+if [[ "$service" == cart-service ]]; then
+  export DATABASE_URL=jdbc:postgresql://localhost:55432/cartdb
+  export DATABASE_USERNAME=cart_app
+  export DATABASE_PASSWORD="$CART_DB_PASSWORD"
+  export DATABASE_SCHEMA=cart
+  export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
+  export SPRING_PROFILES_ACTIVE=local
+fi
 if [[ "$service" == api-gateway ]]; then
   export USER_SERVICE_URL="${USER_SERVICE_URL:-http://localhost:8093}"
   export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
   export INVENTORY_SERVICE_URL="${INVENTORY_SERVICE_URL:-http://localhost:8095}"
+  export CART_SERVICE_URL="${CART_SERVICE_URL:-http://localhost:8096}"
 fi
 
 cd "$ROOT/backend"

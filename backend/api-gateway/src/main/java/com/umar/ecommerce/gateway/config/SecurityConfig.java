@@ -34,6 +34,10 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, "/api/v1/store/me/addresses").hasAuthority("PERM_profile.update_own")
                         .pathMatchers(HttpMethod.PUT, "/api/v1/store/me/addresses/**").hasAuthority("PERM_profile.update_own")
                         .pathMatchers(HttpMethod.DELETE, "/api/v1/store/me/addresses/**").hasAuthority("PERM_profile.update_own")
+                        .pathMatchers(HttpMethod.GET, "/api/v1/store/cart").hasAuthority("PERM_cart.read_own")
+                        .pathMatchers(HttpMethod.PUT, "/api/v1/store/cart/items/**").hasAuthority("PERM_cart.write_own")
+                        .pathMatchers(HttpMethod.DELETE, "/api/v1/store/cart/items/**").hasAuthority("PERM_cart.write_own")
+                        .pathMatchers(HttpMethod.DELETE, "/api/v1/store/cart").hasAuthority("PERM_cart.write_own")
                         .pathMatchers("/api/v1/admin/**").hasAuthority("PERM_admin.access")
                         .anyExchange().denyAll())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(

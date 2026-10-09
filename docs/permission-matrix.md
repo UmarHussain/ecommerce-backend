@@ -18,7 +18,7 @@ Application roles are Keycloak realm composites. Permissions are client roles on
 
 USER_ADMIN may assign `CUSTOMER` and the catalog/inventory/order staff bundles. It cannot assign `USER_ADMIN` or `PLATFORM_ADMIN`, cannot elevate itself, and cannot create custom bundles. Custom bundles are stored in user-service and expand to catalog permissions; they are not created as Keycloak realm roles (that would need `manage-realm`).
 
-Storefront tokens include CUSTOMER only. A dual-role person must use the admin client to receive staff permissions.
+Storefront tokens include CUSTOMER only. A dual-role person must use the admin client to receive staff permissions. `cart.read_own` and `cart.write_own` are client roles on `cart-service`. The gateway and cart-service accept them only from that client. `admin.access` does not read or change a cart.
 
 Catalog administration reads require `catalog.read` on the `catalog-service` client. `catalog.create`, `catalog.update`, and `catalog.activate` do not grant reads, and the same permission names on another client are ignored. Create requests cannot set activation; that stays on the status commands.
 

@@ -10,7 +10,8 @@ APP      ?= storefront-web
         infra-up infra-down infra-logs infra-status apps-up realm-reconcile realm-migrate-portals \
         backend-compile backend-test backend-verify backend-clean \
         frontend-install frontend-test frontend-build frontend-clean \
-        run-service run-frontend smoke security-check catalog-check inventory-check verify clean
+        run-service run-frontend smoke security-check catalog-check inventory-check cart-check \
+        cache-up cache-down cache-status cache-check verify clean
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target> [SERVICE=<module>] [APP=<frontend>]\n\n"} \
@@ -38,6 +39,15 @@ infra-logs: ## Follow logs of running containers (Ctrl+C to stop)
 
 infra-status: ## Show which project containers are running and which compose file started them
 	@bash scripts/local/infra-status.sh
+
+cache-up: ## Start this project's Redis only (cache profile); does not start Kafka
+	$(COMPOSE) --profile cache up -d redis
+
+cache-down: ## Stop this project's Redis container; keeps its volume and every other service
+	$(COMPOSE) --profile cache stop redis
+
+cache-status: ## Show this project's Redis container
+	$(COMPOSE) --profile cache ps redis
 
 apps-up: ## Build images and start the backend services in containers (apps profile)
 	$(COMPOSE) --profile apps up -d --build
@@ -97,6 +107,12 @@ catalog-check: ## Phase 2 catalog checks with real PKCE tokens through the gatew
 
 inventory-check: ## Phase 3 inventory checks with real PKCE tokens through the gateway (needs infra + gateway, user, catalog, inventory)
 	bash scripts/local/inventory-check.sh
+
+cart-check: ## Phase 4 cart checks with real PKCE tokens through the gateway (needs infra + gateway, user, catalog, cart)
+	bash scripts/local/cart-check.sh
+
+cache-check: ## Phase 4 Redis cache and resilience demonstration (needs Redis, gateway, catalog, inventory, cart)
+	bash scripts/local/cache-check.sh
 
 verify: check backend-verify frontend-test frontend-build ## check + backend-verify + frontend test/build (run frontend-install first)
 

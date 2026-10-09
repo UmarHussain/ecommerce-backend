@@ -138,9 +138,24 @@ Executed from `/mnt/d/GitHub/ecommerce-local-platform` in WSL2 (Java 21.0.12.1).
 
 Not executed: `make apps-up`. Reservations, cart, checkout, payment, Redis, and Kafka were not implemented.
 
+## 2026-10-09 — Phase 4 cart, Redis, and resilience
+
+Executed from `/mnt/d/GitHub/ecommerce-local-platform` in WSL2 for Java, Maven, Docker, and the acceptance scripts. Frontend test and build ran on Windows Node. No volumes were deleted and no tokens or passwords were printed. Catalog-service, api-gateway, and inventory-service were restarted from source so the running processes match this code. cart-service was started from source on 8096. Redis was started with `make cache-up` and was left running after `make cache-check` restored it.
+
+- `make check`: passed.
+- `npm test` in `frontend`: storefront 3 files, 6 tests; admin 4 files, 16 tests. Passed.
+- `npm run build` in `frontend`: storefront and admin production builds passed.
+- `make backend-verify` (`./mvnw -B verify`): BUILD SUCCESS in 07:17. Surefire: api-gateway 17, user-service 24, catalog-service 30, inventory-service 13, cart-service 5, order-service 1. Failsafe: `UserServiceKeycloakIT` 0 (admin secret not in that JVM), `UserServicePostgresIT` 1, `CatalogCacheRedisIT` 6, `CatalogPostgresIT` 12, `InventoryPostgresIT` 22, `CartPostgresIT` 8.
+- `make smoke`, `make security-check`, `make catalog-check`, and `make inventory-check`: passed. `catalog-viewer@example.test` still has `CATALOG_EDITOR` and `CATALOG_VIEWER`. This run did not remove that role and did not reset passwords.
+- `make cart-check`: passed. Customer and storefront dual-role tokens carried `cart-service`, `cart.read_own`, and `cart.write_own`. The platform-admin token did not. Admin cart GET was 403. The customer add stored canonical `HEADPHONES-BLK` at 79.99 USD. The other customer did not see that line. A stale `expectedVersion` was 409.
+- `make cache-check`: passed. Public categories through the gateway stored `catalog:v1:categories::all` with TTL 62 seconds. Categories stayed 200 while this project's Redis was stopped, and Redis was started again. Inventory 8095 and cart 8096 actuator circuit-breaker and retry endpoints each listed at least one instance.
+- Browser at `http://localhost:5173` as `customer@example.test`: added Wireless Headphones black, then opened the cart (quantity 1, 79.99 USD, checkout notice present). A second signed-in tab set the quantity to 3 (display subtotal 239.97 USD). The first tab kept its draft of 2, showed "The cart changed since it was loaded", and offered Reload and review. After reload the quantity was 3 and the subtotal was 239.97 USD. Updating that tab to 2 saved a subtotal of 159.98 USD. Remove left "Your cart is empty." Adding the white variant showed `HEADPHONES-WHT`. Signing out and signing in as `dual-role@example.test` showed an empty cart. The leftover white line was then removed with the loaded version.
+
+Not executed: `make apps-up`. Checkout, reservations, payment, and Kafka were not implemented.
+
 ## Still required
 
-- `make apps-up` + `make smoke` in container mode (source-run path is what was verified, including the 2026-10-08 inventory checks and the 2026-10-09 `make inventory-check`).
+- `make apps-up` + `make smoke` in container mode. The source-run path is what was verified, including the 2026-10-09 `make cart-check` and `make cache-check`.
 - Do not treat the catalog-viewer account as a pure viewer until `CATALOG_EDITOR` is removed from it in Keycloak. Inventory read denial uses `inventory-reader@example.test`.
 
 ## Verification limits

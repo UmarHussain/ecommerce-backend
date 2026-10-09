@@ -20,6 +20,7 @@ export function HomePage() {
           <button type="button" onClick={() => void auth.signinRedirect()}>Sign in</button>
         )}
         <Link to="/catalog">Browse catalog</Link>
+        <Link to="/cart">Cart</Link>
         <Link to="/profile">Profile</Link>
       </div>
     </main>

@@ -33,7 +33,8 @@ class ProductServiceTest {
                 productRepository,
                 variantRepository,
                 categoryRepository,
-                new CatalogMapperImpl()
+                new CatalogMapperImpl(),
+                event -> { }
         );
     }
 

@@ -304,6 +304,16 @@ Sign in with `admin-spa` as `inventory-manager@example.test`. Send `Idempotency-
 
 A second adjustment that reuses the old `expectedVersion` returns `409` and `INVENTORY_STALE_VERSION`. Repeating the first POST with the same key and body returns the original `201`. `inventory-reader@example.test` can GET and receives `403` on POST. Details: [phase-3.md](phase-3.md).
 
+## Cart calls
+
+Sign in with `storefront-spa` as `customer@example.test`. `make cart-check` is the scripted form and does not print the token.
+
+- `GET http://localhost:8090/api/v1/store/cart`
+- `PUT http://localhost:8090/api/v1/store/cart/items/HEADPHONES-BLK` with `{ "quantity": 1, "expectedVersion": 0 }` on an empty new cart
+- `DELETE http://localhost:8090/api/v1/store/cart/items/HEADPHONES-BLK?expectedVersion=1`
+
+Use the `version` from the last response as the next `expectedVersion`. A stale version returns `409` and `CART_STALE_VERSION`. An admin-spa token is `403` on these paths. Details: [phase-4.md](phase-4.md).
+
 ## Shortcut that prints the same token
 
 From the repository root, this runs the sequence above and prints the token JSON:

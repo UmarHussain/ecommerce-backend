@@ -44,17 +44,55 @@ platform:
     audience: inventory-service
   catalog:
     base-url: ${CATALOG_SERVICE_URL:http://localhost:8094}
-    connect-timeout: ${CATALOG_CONNECT_TIMEOUT:2s}
-    read-timeout: ${CATALOG_READ_TIMEOUT:2s}
-    pool-acquire-timeout: ${CATALOG_POOL_ACQUIRE_TIMEOUT:2s}
+    connect-timeout: ${CATALOG_CONNECT_TIMEOUT:300ms}
+    read-timeout: ${CATALOG_READ_TIMEOUT:800ms}
+    pool-acquire-timeout: ${CATALOG_POOL_ACQUIRE_TIMEOUT:300ms}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      inventoryCatalog:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 8
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 1
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        recordExceptions:
+          - com.umar.ecommerce.inventory.catalog.CatalogTechnicalException
+        ignoreExceptions:
+          - com.umar.ecommerce.inventory.exception.InventoryProblem
+  retry:
+    instances:
+      inventoryCatalog:
+        maxAttempts: 2
+        waitDuration: 80ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        exponentialMaxWaitDuration: 200ms
+        enableRandomizedWait: true
+        randomizedWaitFactor: 0.5
+        retryExceptions:
+          - com.umar.ecommerce.inventory.catalog.CatalogTechnicalException
+        ignoreExceptions:
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+          - com.umar.ecommerce.inventory.exception.InventoryProblem
 
 management:
+  health:
+    circuitbreakers:
+      enabled: false
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,circuitbreakers,retries
   endpoint:
     health:
       probes:
         enabled: true
       show-details: never
+    circuitbreakers:
+      enabled: true
+    retries:
+      enabled: true

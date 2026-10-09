@@ -1,5 +1,8 @@
 package com.umar.ecommerce.inventory.config;
 
+import com.umar.ecommerce.inventory.catalog.CatalogCallGuard;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.RetryRegistry;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -16,6 +19,14 @@ import org.springframework.web.client.RestClient;
 @Configuration
 @EnableConfigurationProperties(InventoryCatalogProperties.class)
 public class InventoryCatalogConfig {
+
+    @Bean
+    CatalogCallGuard catalogCallGuard(CircuitBreakerRegistry circuitBreakers, RetryRegistry retries) {
+        return new CatalogCallGuard(
+                circuitBreakers.circuitBreaker("inventoryCatalog"),
+                retries.retry("inventoryCatalog")
+        );
+    }
 
     @Bean
     RestClient catalogRestClient(InventoryCatalogProperties properties) {

@@ -3,6 +3,7 @@ package com.umar.ecommerce.inventory.catalog;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.umar.ecommerce.inventory.exception.InventoryProblem;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -15,7 +16,9 @@ import java.util.UUID;
 
 /**
  * Reads the protected catalog admin APIs with the caller's access token.
- * Tokens are forwarded and never logged. There is no retry.
+ * The token is forwarded and never logged. Customer identity headers are not
+ * added. Resilience4j retries only technical catalog failures; the HTTP client
+ * itself does not retry.
  */
 @Component
 public class HttpCatalogLookupAdapter implements CatalogLookupPort {
@@ -24,10 +27,21 @@ public class HttpCatalogLookupAdapter implements CatalogLookupPort {
 
     private final RestClient catalog;
     private final ObjectMapper objectMapper;
+    private final CatalogCallGuard guard;
 
-    public HttpCatalogLookupAdapter(RestClient catalogRestClient, ObjectMapper objectMapper) {
+    @Autowired
+    public HttpCatalogLookupAdapter(
+            RestClient catalogRestClient,
+            ObjectMapper objectMapper,
+            CatalogCallGuard guard
+    ) {
         this.catalog = catalogRestClient;
         this.objectMapper = objectMapper;
+        this.guard = guard;
+    }
+
+    HttpCatalogLookupAdapter(RestClient catalogRestClient, ObjectMapper objectMapper) {
+        this(catalogRestClient, objectMapper, CatalogCallGuard.once());
     }
 
     @Override
@@ -53,6 +67,10 @@ public class HttpCatalogLookupAdapter implements CatalogLookupPort {
     }
 
     private JsonNode get(String path, String bearerToken, String correlationId) {
+        return guard.execute(() -> getOnce(path, bearerToken, correlationId));
+    }
+
+    private JsonNode getOnce(String path, String bearerToken, String correlationId) {
         try {
             String body = catalog.get()
                     .uri(path)
@@ -64,25 +82,21 @@ public class HttpCatalogLookupAdapter implements CatalogLookupPort {
                 throw unavailable("Catalog returned an empty response");
             }
             return objectMapper.readTree(body);
-        } catch (InventoryProblem problem) {
+        } catch (InventoryProblem | CatalogTechnicalException problem) {
             throw problem;
         } catch (RestClientResponseException exception) {
             throw mapStatus(exception.getStatusCode());
         } catch (ResourceAccessException exception) {
             if (isTimeout(exception)) {
-                throw new InventoryProblem(
-                        HttpStatus.GATEWAY_TIMEOUT,
-                        InventoryProblem.CATALOG_TIMEOUT,
-                        "Catalog did not respond in time"
-                );
+                throw new CatalogTechnicalException(CatalogTechnicalException.Kind.TIMEOUT, "catalog timeout");
             }
-            throw unavailable("Catalog is unavailable");
+            throw new CatalogTechnicalException(CatalogTechnicalException.Kind.UNAVAILABLE, "catalog connection failed");
         } catch (Exception exception) {
-            throw unavailable("Catalog response could not be read");
+            throw new CatalogTechnicalException(CatalogTechnicalException.Kind.UNAVAILABLE, "catalog response could not be read");
         }
     }
 
-    private static InventoryProblem mapStatus(HttpStatusCode status) {
+    private static RuntimeException mapStatus(HttpStatusCode status) {
         int code = status.value();
         if (code == 401) {
             return new InventoryProblem(
@@ -104,6 +118,19 @@ public class HttpCatalogLookupAdapter implements CatalogLookupPort {
                     InventoryProblem.CATALOG_VARIANT_NOT_FOUND,
                     "Catalog has no variant with that identifier"
             );
+        }
+        if (code == 429) {
+            return new InventoryProblem(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    InventoryProblem.CATALOG_UNAVAILABLE,
+                    "Catalog asked inventory to slow down; automatic retry of 429 is not enabled"
+            );
+        }
+        if (code == 504) {
+            return new CatalogTechnicalException(CatalogTechnicalException.Kind.TIMEOUT, "catalog 504");
+        }
+        if (code == 502 || code == 503) {
+            return new CatalogTechnicalException(CatalogTechnicalException.Kind.UNAVAILABLE, "catalog " + code);
         }
         return unavailable("Catalog is unavailable");
     }

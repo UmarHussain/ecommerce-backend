@@ -1,5 +1,6 @@
 package com.umar.ecommerce.catalog.service;
 
+import com.umar.ecommerce.catalog.cache.PublicCatalogChanged;
 import com.umar.ecommerce.catalog.dto.request.CategoryRequest;
 import com.umar.ecommerce.catalog.dto.request.CategoryUpdateRequest;
 import com.umar.ecommerce.catalog.dto.response.CategoryResponse;
@@ -9,6 +10,7 @@ import com.umar.ecommerce.catalog.exception.ResourceConflictException;
 import com.umar.ecommerce.catalog.exception.ResourceNotFoundException;
 import com.umar.ecommerce.catalog.repository.CategoryRepository;
 import com.umar.ecommerce.catalog.repository.CategorySpecifications;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -26,10 +28,16 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CatalogMapper mapper;
+    private final ApplicationEventPublisher events;
 
-    public CategoryService(CategoryRepository categoryRepository, CatalogMapper mapper) {
+    public CategoryService(
+            CategoryRepository categoryRepository,
+            CatalogMapper mapper,
+            ApplicationEventPublisher events
+    ) {
         this.categoryRepository = categoryRepository;
         this.mapper = mapper;
+        this.events = events;
     }
 
     public List<CategoryResponse> listActiveCategories() {
@@ -68,6 +76,7 @@ public class CategoryService {
         ensureSlugAvailable(slug, null);
 
         Category category = categoryRepository.saveAndFlush(new Category(request.name(), slug));
+        events.publishEvent(new PublicCatalogChanged("category-create"));
         return mapper.toCategoryResponse(category);
     }
 
@@ -80,6 +89,7 @@ public class CategoryService {
 
         category.updateDetails(request.name(), slug);
         categoryRepository.flush();
+        events.publishEvent(new PublicCatalogChanged("category-update"));
         return mapper.toCategoryResponse(category);
     }
 
@@ -89,6 +99,7 @@ public class CategoryService {
         VersionGuard.requireCurrent(category.getVersion(), expectedVersion);
         category.changeActiveStatus(active);
         categoryRepository.flush();
+        events.publishEvent(new PublicCatalogChanged("category-status"));
         return mapper.toCategoryResponse(category);
     }
 

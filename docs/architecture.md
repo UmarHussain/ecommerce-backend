@@ -19,4 +19,4 @@ Domain services own their invariants and databases. The gateway does not compose
 
 Databases: userdb, catalogdb, inventorydb, cartdb, orderdb, paymentdb, keycloakdb; distinct app roles. A shared local server saves resources but does not confer cross-service query access. Catalog, user-service, and inventory-service connect to their own databases; Keycloak uses keycloakdb. Cart, order, and payment databases remain reserved.
 
-The dev baseline uses HTTP bound to localhost/private Docker network. TLS/mTLS is later work. Redis/Kafka profiles are convenience infrastructure, not evidence of implemented caching/messaging.
+The dev baseline uses HTTP bound to localhost/private Docker network. TLS/mTLS is later work. Redis caches public catalog browse responses. Kafka remains unused infrastructure.

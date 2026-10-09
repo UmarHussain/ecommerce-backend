@@ -1,5 +1,6 @@
 package com.umar.ecommerce.catalog.controller;
 
+import com.umar.ecommerce.catalog.cache.PublicBrowseFacade;
 import com.umar.ecommerce.catalog.config.SecurityConfig;
 import com.umar.ecommerce.catalog.dto.response.CategoryResponse;
 import com.umar.ecommerce.catalog.dto.response.PageResponse;
@@ -57,6 +58,8 @@ class CatalogControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private PublicBrowseFacade browse;
+    @MockitoBean
     private CategoryService categoryService;
     @MockitoBean
     private ProductService productService;
@@ -65,7 +68,7 @@ class CatalogControllerTest {
 
     @Test
     void publicCatalogIsAnonymousAndUsesStablePageEnvelope() throws Exception {
-        when(productService.searchPublicProducts(
+        when(browse.searchProducts(
                 any(), any(), any(), any(), any(), any(Integer.class), any(Integer.class), any()
         )).thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0, true, true, "name,asc"));
 
@@ -80,7 +83,7 @@ class CatalogControllerTest {
 
     @Test
     void publicSearchForwardsFiltersPaginationAndSort() throws Exception {
-        when(productService.searchPublicProducts(
+        when(browse.searchProducts(
                 eq("keyboard"),
                 eq("electronics"),
                 eq(new BigDecimal("10.0000")),
@@ -116,14 +119,14 @@ class CatalogControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("CATALOG_VALIDATION_FAILED"));
 
-        verify(productService, never()).searchPublicProducts(
+        verify(browse, never()).searchProducts(
                 any(), any(), any(), any(), any(), any(Integer.class), any(Integer.class), any()
         );
     }
 
     @Test
     void publicSearchRejectsDisallowedSortWithProblemDetails() throws Exception {
-        when(productService.searchPublicProducts(
+        when(browse.searchProducts(
                 any(), any(), any(), any(), any(), any(Integer.class), any(Integer.class), eq("price,asc")
         )).thenThrow(new InvalidRequestException(
                 "sort field must be one of name, slug, createdAt, updatedAt"
@@ -140,13 +143,13 @@ class CatalogControllerTest {
     void publicProductLookupAndCategoriesAreAnonymous() throws Exception {
         UUID productId = UUID.randomUUID();
         Instant now = Instant.now();
-        when(productService.getPublicProduct(productId)).thenReturn(productResponse(productId, now));
-        when(productService.getPublicProductBySlug("wireless-headphones"))
+        when(browse.getProduct(productId)).thenReturn(productResponse(productId, now));
+        when(browse.getProductBySlug("wireless-headphones"))
                 .thenReturn(productResponse(productId, now));
-        when(categoryService.listActiveCategories()).thenReturn(List.of(
+        when(browse.listCategories()).thenReturn(List.of(
                 new CategoryResponse(UUID.randomUUID(), "Electronics", "electronics", true, now, now, 0)
         ));
-        when(variantService.listPublicVariants(productId)).thenReturn(List.of());
+        when(browse.listVariants(productId)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/catalog/products/{id}", productId))
                 .andExpect(status().isOk())
@@ -164,7 +167,7 @@ class CatalogControllerTest {
     @Test
     void missingPublicProductUsesProblemDetails() throws Exception {
         UUID productId = UUID.randomUUID();
-        when(productService.getPublicProduct(productId))
+        when(browse.getProduct(productId))
                 .thenThrow(new ResourceNotFoundException("Product '%s' was not found".formatted(productId)));
 
         mockMvc.perform(get("/api/v1/catalog/products/{id}", productId))
@@ -175,7 +178,7 @@ class CatalogControllerTest {
 
     @Test
     void unexpectedFailuresDoNotExposeInternalDetails() throws Exception {
-        when(productService.getPublicProduct(any()))
+        when(browse.getProduct(any()))
                 .thenThrow(new IllegalStateException("jdbc password=super-secret"));
 
         mockMvc.perform(get("/api/v1/catalog/products/{id}", UUID.randomUUID()))
