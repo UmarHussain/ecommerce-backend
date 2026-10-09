@@ -39,7 +39,7 @@ make apps-up
 make smoke
 ```
 
-The public catalog path is gateway → catalog-service. Phase 1 login, profiles, and staff administration are implemented and now go gateway → user-service. Phase 2 catalog administration is implemented on the same path; see [docs/phase-2.md](docs/phase-2.md). Phase 3 inventory administration is implemented as admin-web → gateway → inventory-service; see [docs/phase-3.md](docs/phase-3.md). `storefront-backend` and `admin-portal-backend` have been removed. Cart, checkout, and Kafka Saga are not implemented. After pulling the portal-removal refactor onto an already imported realm, run `make realm-migrate-portals` and sign in again. A realm imported before Phase 3 also needs `make realm-reconcile` so `INVENTORY_READER` and `inventory-reader@example.test` exist.
+The public catalog path is gateway → catalog-service. Phase 1 login/profiles/staff administration, Phase 2 catalog, Phase 3 inventory, and Phase 4 cart/cache are implemented. Phase 5 adds gateway → order-service checkout, Kafka reservations, a local payment simulator, and cart cleanup; see [docs/phase-5.md](docs/phase-5.md). Request and response bodies for that path are in [docs/cart-quote-order.md](docs/cart-quote-order.md). `storefront-backend` and `admin-portal-backend` stay removed. Checkout in containers needs `make checkout-up`; source-run services use Kafka at `localhost:59092`. After pulling the portal-removal refactor onto an already imported realm, run `make realm-migrate-portals` and sign in again. A realm imported before Phase 3 also needs `make realm-reconcile` so `INVENTORY_READER` and `inventory-reader@example.test` exist.
 
 ## Run the frontends (two terminals)
 

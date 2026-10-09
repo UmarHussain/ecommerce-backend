@@ -7,10 +7,10 @@ SERVICE  ?= catalog-service
 APP      ?= storefront-web
 
 .PHONY: help bootstrap check \
-        infra-up infra-down infra-logs infra-status apps-up realm-reconcile realm-migrate-portals \
+        infra-up infra-down infra-logs infra-status apps-up checkout-up checkout-debug-up realm-reconcile realm-migrate-portals \
         backend-compile backend-test backend-verify backend-clean \
         frontend-install frontend-test frontend-build frontend-clean \
-        run-service run-frontend smoke security-check catalog-check inventory-check cart-check \
+        run-service run-frontend smoke security-check catalog-check inventory-check cart-check checkout-check saga-check \
         cache-up cache-down cache-status cache-check verify clean
 
 help: ## Show this help
@@ -51,6 +51,12 @@ cache-status: ## Show this project's Redis container
 
 apps-up: ## Build images and start the backend services in containers (apps profile)
 	$(COMPOSE) --profile apps up -d --build
+
+checkout-up: ## Build/start backend services plus this project's Redis and Kafka for Phase 5
+	$(COMPOSE) --profile apps --profile cache --profile events up -d --build
+
+checkout-debug-up: ## Phase 5 stack with service ports 8093-8098 published for local checks/IDE use
+	$(COMPOSE) -f infrastructure/local/compose.debug.yaml --profile apps --profile cache --profile events up -d --build
 
 realm-reconcile: ## Apply realm-template.json to the running Keycloak realm (additive, idempotent; never deletes or resets passwords)
 	bash scripts/local/realm-reconcile.sh
@@ -113,6 +119,12 @@ cart-check: ## Phase 4 cart checks with real PKCE tokens through the gateway (ne
 
 cache-check: ## Phase 4 Redis cache and resilience demonstration (needs Redis, gateway, catalog, inventory, cart)
 	bash scripts/local/cache-check.sh
+
+checkout-check: ## Phase 5 happy-path checkout with real PKCE tokens (needs all checkout services and Kafka)
+	bash scripts/local/checkout-check.sh
+
+saga-check: ## Phase 5 decline/compensation checks (needs enabled payment simulator control and Kafka)
+	bash scripts/local/saga-check.sh
 
 verify: check backend-verify frontend-test frontend-build ## check + backend-verify + frontend test/build (run frontend-install first)
 

@@ -44,6 +44,7 @@ class GatewayRouteTest {
         registry.add("CATALOG_SERVICE_URL", () -> base);
         registry.add("INVENTORY_SERVICE_URL", () -> base);
         registry.add("CART_SERVICE_URL", () -> base);
+        registry.add("ORDER_SERVICE_URL", () -> base);
         registry.add("platform.gateway.rate-limit.enabled", () -> "false");
         registry.add("platform.security.issuer-uri", () -> "http://localhost:8180/realms/ecommerce-local");
         registry.add("platform.security.jwk-set-uri", () -> base + "/jwks");
@@ -256,6 +257,39 @@ class GatewayRouteTest {
                 .expectStatus().isOk();
         org.junit.jupiter.api.Assertions.assertEquals("DELETE", LAST.get().method());
         org.junit.jupiter.api.Assertions.assertEquals("/api/v1/cart", LAST.get().path());
+    }
+
+    @Test
+    void customerOrderRoutesRequireOrderRolesAndRewrite() {
+        client.post().uri("/api/v1/store/orders/quotes")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer customer-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"expectedCartVersion\":1,\"addressId\":\"00000000-0000-0000-0000-000000000001\"}")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        when(jwtDecoder.decode(anyString())).thenReturn(Mono.just(jwt(Map.of(
+                "order-service", List.of("order.create", "order.read_own", "order.cancel_own")
+        ))));
+        client.post().uri("/api/v1/store/orders/quotes")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer customer-token")
+                .header("X-Correlation-ID", "corr-order-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"expectedCartVersion\":1,\"addressId\":\"00000000-0000-0000-0000-000000000001\"}")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals("POST", LAST.get().method());
+        org.junit.jupiter.api.Assertions.assertEquals("/api/v1/orders/quotes", LAST.get().path());
+
+        client.post().uri("/api/v1/store/orders")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer customer-token")
+                .header("Idempotency-Key", "checkout-key-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"quoteId\":\"00000000-0000-0000-0000-000000000002\"}")
+                .exchange()
+                .expectStatus().isOk();
+        org.junit.jupiter.api.Assertions.assertEquals("/api/v1/orders", LAST.get().path());
+        org.junit.jupiter.api.Assertions.assertEquals("checkout-key-1", LAST.get().idempotencyKey());
     }
 
     @Test

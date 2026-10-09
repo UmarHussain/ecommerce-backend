@@ -46,6 +46,7 @@ if [[ "$service" == inventory-service ]]; then
   export DATABASE_PASSWORD="$INVENTORY_DB_PASSWORD"
   export DATABASE_SCHEMA=inventory
   export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
+  export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:59092}"
   export SPRING_PROFILES_ACTIVE=local
 fi
 if [[ "$service" == cart-service ]]; then
@@ -54,6 +55,26 @@ if [[ "$service" == cart-service ]]; then
   export DATABASE_PASSWORD="$CART_DB_PASSWORD"
   export DATABASE_SCHEMA=cart
   export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
+  export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:59092}"
+  export SPRING_PROFILES_ACTIVE=local
+fi
+if [[ "$service" == order-service ]]; then
+  export DATABASE_URL=jdbc:postgresql://localhost:55432/orderdb
+  export DATABASE_USERNAME=order_app
+  export DATABASE_PASSWORD="$ORDER_DB_PASSWORD"
+  export DATABASE_SCHEMA=order
+  export USER_SERVICE_URL="${USER_SERVICE_URL:-http://localhost:8093}"
+  export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
+  export CART_SERVICE_URL="${CART_SERVICE_URL:-http://localhost:8096}"
+  export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:59092}"
+  export SPRING_PROFILES_ACTIVE=local
+fi
+if [[ "$service" == payment-service ]]; then
+  export DATABASE_URL=jdbc:postgresql://localhost:55432/paymentdb
+  export DATABASE_USERNAME=payment_app
+  export DATABASE_PASSWORD="$PAYMENT_DB_PASSWORD"
+  export DATABASE_SCHEMA=payment
+  export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:59092}"
   export SPRING_PROFILES_ACTIVE=local
 fi
 if [[ "$service" == api-gateway ]]; then
@@ -61,6 +82,7 @@ if [[ "$service" == api-gateway ]]; then
   export CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://localhost:8094}"
   export INVENTORY_SERVICE_URL="${INVENTORY_SERVICE_URL:-http://localhost:8095}"
   export CART_SERVICE_URL="${CART_SERVICE_URL:-http://localhost:8096}"
+  export ORDER_SERVICE_URL="${ORDER_SERVICE_URL:-http://localhost:8097}"
 fi
 
 cd "$ROOT/backend"

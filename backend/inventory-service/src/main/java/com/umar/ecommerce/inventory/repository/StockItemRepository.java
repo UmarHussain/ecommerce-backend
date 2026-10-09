@@ -18,4 +18,8 @@ public interface StockItemRepository extends JpaRepository<StockItem, UUID>, Jpa
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select item from StockItem item where item.id = :id")
     Optional<StockItem> lockById(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select item from StockItem item where item.catalogVariantId = :catalogVariantId")
+    Optional<StockItem> lockByCatalogVariantId(@Param("catalogVariantId") UUID catalogVariantId);
 }

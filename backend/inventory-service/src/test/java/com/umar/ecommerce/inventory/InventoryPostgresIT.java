@@ -33,6 +33,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +71,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "inventory.workers.enabled=false",
+        "inventory.messaging.listener-enabled=false",
+        "inventory.messaging.dispatch-enabled=false",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
+})
 @Testcontainers
 class InventoryPostgresIT {
 
@@ -130,6 +137,8 @@ class InventoryPostgresIT {
     private StockQueryService queries;
     @MockitoSpyBean
     private HttpCatalogLookupAdapter catalog;
+    @MockitoBean
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     @BeforeEach
     void catalogLookupStaysOutsideATransaction() {
@@ -150,7 +159,7 @@ class InventoryPostgresIT {
         assertThat(jdbc.queryForObject(
                 "select count(*) from flyway_schema_history where success",
                 Integer.class
-        )).isEqualTo(1);
+        )).isEqualTo(2);
     }
 
     @Test

@@ -2,12 +2,20 @@ export class ApiError extends Error {
   readonly status: number
   readonly code: string | null
   readonly correlationId: string | null
+  readonly reason: string | null
 
-  constructor(status: number, message: string, code: string | null = null, correlationId: string | null = null) {
+  constructor(
+    status: number,
+    message: string,
+    code: string | null = null,
+    correlationId: string | null = null,
+    reason: string | null = null,
+  ) {
     super(message)
     this.status = status
     this.code = code
     this.correlationId = correlationId
+    this.reason = reason
   }
 }
 
@@ -22,7 +30,7 @@ export async function api<T>(path: string, token: string | undefined, init: Requ
   const response = await fetch(path, { ...init, headers })
   if (!response.ok) {
     const problem = await readProblem(response)
-    throw new ApiError(response.status, problem.message, problem.code, problem.correlationId)
+    throw new ApiError(response.status, problem.message, problem.code, problem.correlationId, problem.reason)
   }
   if (response.status === 204) {
     return undefined as T
@@ -30,16 +38,17 @@ export async function api<T>(path: string, token: string | undefined, init: Requ
   return response.json() as Promise<T>
 }
 
-async function readProblem(response: Response): Promise<{ message: string; code: string | null; correlationId: string | null }> {
+async function readProblem(response: Response): Promise<{ message: string; code: string | null; correlationId: string | null; reason: string | null }> {
   const headerId = response.headers.get('X-Correlation-ID')
   try {
-    const body = await response.json() as { detail?: string; code?: string; correlationId?: string }
+    const body = await response.json() as { detail?: string; code?: string; correlationId?: string; reason?: string }
     return {
       message: body.detail ?? response.statusText,
       code: body.code ?? null,
       correlationId: body.correlationId ?? headerId,
+      reason: body.reason ?? null,
     }
   } catch {
-    return { message: response.statusText, code: null, correlationId: headerId }
+    return { message: response.statusText, code: null, correlationId: headerId, reason: null }
   }
 }

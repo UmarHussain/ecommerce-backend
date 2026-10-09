@@ -20,6 +20,8 @@ USER_ADMIN may assign `CUSTOMER` and the catalog/inventory/order staff bundles. 
 
 Storefront tokens include CUSTOMER only. A dual-role person must use the admin client to receive staff permissions. `cart.read_own` and `cart.write_own` are client roles on `cart-service`. The gateway and cart-service accept them only from that client. `admin.access` does not read or change a cart.
 
+`order.create`, `order.read_own`, and `order.cancel_own` are client roles on `order-service`. Quote and accept require create; list/detail require read-own; cancellation requires cancel-own plus the order state rule. order-service derives the owner from JWT issuer and subject and returns `404` for another customer's order id. The gateway mapping is only a coarse check. ORDER_MANAGER permissions are reserved for Phase 6 and do not add a Phase 5 customer or arbitrary paid-state route.
+
 Catalog administration reads require `catalog.read` on the `catalog-service` client. `catalog.create`, `catalog.update`, and `catalog.activate` do not grant reads, and the same permission names on another client are ignored. Create requests cannot set activation; that stays on the status commands.
 
 Inventory reads and history require `inventory.read` on the `inventory-service` client. Setup and adjustment require `inventory.adjust`. Setup also requires `catalog.read` on the `catalog-service` client in the same access token. inventory-service does not map that catalog role into an inventory authority. `INVENTORY_READER` can read stock and cannot set it up. `catalog-viewer@example.test` is not a pure inventory reader; that account has also carried `CATALOG_EDITOR` in this checkout. Use `inventory-reader@example.test` for a token with only `inventory.read`.

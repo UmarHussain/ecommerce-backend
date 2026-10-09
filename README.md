@@ -4,16 +4,16 @@ A Cursor-ready local starter derived from the supplied e-commerce project. Start
 
 ## Included
 
-- Six Spring applications: gateway, user, catalog, inventory, cart, and order. Storefront and admin portal backends were removed after Phase 1.
+- Seven Spring applications: gateway, user, catalog, inventory, cart, order, and the local payment simulator. Storefront and admin portal backends were removed after Phase 1.
 - Retained catalog entities, migrations, seed data, validation, search, REST APIs, error handling, and tests; versioned routes and finer permissions added.
-- Gateway → catalog-service for public reads, and gateway → user-service for profiles and staff administration.
+- Gateway routes explicitly to the owning user, catalog, inventory, cart, and order services. Payment stays off the gateway.
 - JWT signature/issuer/audience/access-token checks with deny-by-default security.
 - Keycloak realm template with separate clients, scoped role bundles, and generated local-only seed credentials.
 - Isolated PostgreSQL databases/users; optional Redis and Kafka Compose profiles.
 - Two React shells with Vite API proxying.
 - Implementation plan, master specification, Cursor rules, service guides, and honest verification records.
 
-Phase 1 identity and staff administration are implemented. Cart, checkout, and Kafka Saga are not. See [service status](docs/service-status.md).
+Phases 1–4 are complete. Phase 5 checkout, reservations, payment simulation, and Kafka Saga are in acceptance; see [phase-5.md](docs/phase-5.md) and [service status](docs/service-status.md).
 
 ## Commands
 
@@ -37,6 +37,7 @@ Frontends: `make frontend-install`, then `make run-frontend APP=storefront-web` 
 - [Architecture](docs/architecture.md)
 - [Security and permissions](docs/security-model.md)
 - [Seed users and role test cases](docs/seed-users.md)
+- [Cart, quote, and order APIs](docs/cart-quote-order.md)
 - [User data ownership](docs/user-data-ownership.md)
 - [Source provenance](docs/source-provenance.md)
 - [Verification](docs/verification.md)

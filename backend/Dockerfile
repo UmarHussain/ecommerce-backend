@@ -1,8 +1,14 @@
 FROM eclipse-temurin:21.0.8_9-jdk-jammy AS build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends unzip && \
+    rm -rf /var/lib/apt/lists/*
 WORKDIR /build
 COPY . .
 ARG SERVICE
-RUN chmod +x mvnw && ./mvnw -B -pl "$SERVICE" -am -Dmaven.test.skip=true package && cp "$SERVICE/target/$SERVICE-0.1.0-SNAPSHOT.jar" /app.jar
+RUN --mount=type=cache,id=ecommerce-maven-3.9.16-v1,target=/root/.m2,sharing=locked \
+    chmod +x mvnw && \
+    ./mvnw -B -pl "$SERVICE" -am -Dmaven.test.skip=true package && \
+    cp "$SERVICE/target/$SERVICE-0.1.0-SNAPSHOT.jar" /app.jar
 FROM eclipse-temurin:21.0.8_9-jre-jammy
 WORKDIR /app
 COPY --from=build /app.jar app.jar

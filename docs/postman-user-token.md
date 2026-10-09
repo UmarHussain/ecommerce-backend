@@ -314,6 +314,43 @@ Sign in with `storefront-spa` as `customer@example.test`. `make cart-check` is t
 
 Use the `version` from the last response as the next `expectedVersion`. A stale version returns `409` and `CART_STALE_VERSION`. An admin-spa token is `403` on these paths. Details: [phase-4.md](phase-4.md).
 
+## Checkout and order calls
+
+Sign in with `storefront-spa` as `customer@example.test`. The account needs a saved address, a non-empty cart, and inventory for every cart line. `make checkout-check` creates an isolated catalog/stock fixture and exercises the complete path without printing the token.
+
+1. `GET http://localhost:8090/api/v1/store/me`; copy an address `id`.
+2. `GET http://localhost:8090/api/v1/store/cart`; copy `version`.
+3. `POST http://localhost:8090/api/v1/store/orders/quotes`:
+
+```json
+{
+  "expectedCartVersion": 4,
+  "addressId": "{{addressId}}"
+}
+```
+
+4. Copy the quote `id`, amount, currency, and expiry. Accept only the reviewed quote:
+
+`POST http://localhost:8090/api/v1/store/orders`
+
+Headers:
+
+- `Authorization: Bearer {{customer_token}}`
+- `Idempotency-Key: checkout-postman-001`
+- `Content-Type: application/json`
+
+```json
+{"quoteId":"{{quoteId}}"}
+```
+
+The response is `202`. Preserve the key and body after a timeout or lost response. Repeating both returns the stored accepted result. Reusing the key for another quote returns `409 ORDER_IDEMPOTENCY_CONFLICT`.
+
+5. Poll `GET http://localhost:8090/api/v1/store/orders/{{orderId}}`.
+6. List with `GET http://localhost:8090/api/v1/store/orders`.
+7. Before Phase 6 fulfilment starts, request cancellation with `POST http://localhost:8090/api/v1/store/orders/{{orderId}}/cancel`.
+
+Payment is simulated and asynchronous. Do not send card fields or a payment-success flag. payment-service has no customer route and is not exposed through the gateway. Contracts and recovery behavior: [phase-5.md](phase-5.md).
+
 ## Shortcut that prints the same token
 
 From the repository root, this runs the sequence above and prints the token JSON:

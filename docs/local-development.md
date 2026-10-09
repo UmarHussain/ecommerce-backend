@@ -147,10 +147,11 @@ With infrastructure up, start services in separate WSL2 terminals. Each service 
 |---|---|---|---|
 | catalog-service | `make run-service SERVICE=catalog-service` | 8094 | Implemented: Flyway migrations, seed data, products/categories CRUD, search, permission checks, tests |
 | user-service | `make run-service SERVICE=user-service` | 8093 | Profiles, `/api/v1/admin/me`, Keycloak Admin adapter, durable operations |
-| api-gateway | `make run-service SERVICE=api-gateway` | 8090 | Routes and rewrites to user-service, catalog-service, and inventory-service |
+| api-gateway | `make run-service SERVICE=api-gateway` | 8090 | Routes and rewrites to user, catalog, inventory, cart, and order services |
 | inventory-service | `make run-service SERVICE=inventory-service` | 8095 | Stock setup, adjustments, and history on `inventorydb`; catalog lookup at setup |
-| cart-service | `make run-service SERVICE=cart-service` | 8096 | Own cart; Compose profile `later` |
-| order-service | `make run-service SERVICE=order-service` | 8097 | Secured shell; Phase 5 |
+| cart-service | `make run-service SERVICE=cart-service` | 8096 | Own cart; also on the Compose `apps` profile |
+| order-service | `make run-service SERVICE=order-service` | 8097 | Quotes and checkout saga on `orderdb` |
+| payment-service | `make run-service SERVICE=payment-service` | 8098 | Simulated charges on `paymentdb`; not routed by the gateway |
 
 Minimum set for the public catalog path through the gateway: `catalog-service` and `api-gateway`. Add `user-service` before profile or admin calls. Stock administration also needs `inventory-service`.
 
@@ -169,10 +170,18 @@ Swagger UI is available at `http://localhost:<port>/swagger-ui/index.html` on th
 
 ### Container alternative
 
-Instead of terminals, `make apps-up` builds one image per module (tests skipped during the build) and runs gateway, user, catalog, and inventory in containers. Do not run containers and source services on the same ports at once. Internal services are not host-published unless you add the debug override:
+Instead of terminals, `make apps-up` builds one image per module (tests skipped during the build) and runs gateway, user, catalog, inventory, cart, order, and payment in containers. Checkout also needs the `events` profile so those services can reach Kafka at `kafka:9092`, and the `cache` profile for catalog browse. Do not run containers and source services on the same ports at once. Internal services are not host-published unless you add the debug override, which also publishes payment-service on `127.0.0.1:8098`:
+
+`make checkout-up` is the shorthand that starts the `apps`, `cache`, and `events` profiles without deleting volumes. `make checkout-debug-up` adds the debug override and publishes 8093–8098; use it for `make saga-check`, whose local-only payment control endpoint is never routed through the gateway.
 
 ```bash
 docker compose --env-file .env -f infrastructure/local/compose.yaml -f infrastructure/local/compose.debug.yaml --profile apps up -d --build
+```
+
+Checkout in containers also needs Redis and Kafka:
+
+```bash
+docker compose --env-file .env -f infrastructure/local/compose.yaml -f infrastructure/local/compose.debug.yaml --profile apps --profile cache --profile events up -d --build
 ```
 
 ## 6. Running the frontends (one terminal each)

@@ -1,0 +1,86 @@
+server:
+  port: ${SERVER_PORT:8098}
+
+spring:
+  application:
+    name: payment-service
+  mvc:
+    problemdetails:
+      enabled: true
+  datasource:
+    url: ${DATABASE_URL:}
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      schema: ${DATABASE_SCHEMA:payment}
+      connection-init-sql: SET TIME ZONE 'UTC'
+      maximum-pool-size: ${DATABASE_POOL_MAX_SIZE:10}
+      minimum-idle: ${DATABASE_POOL_MIN_IDLE:2}
+      connection-timeout: ${DATABASE_CONNECTION_TIMEOUT_MS:30000}
+      validation-timeout: ${DATABASE_VALIDATION_TIMEOUT_MS:5000}
+      idle-timeout: ${DATABASE_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DATABASE_MAX_LIFETIME_MS:1800000}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    default-schema: ${DATABASE_SCHEMA:payment}
+    schemas: ${DATABASE_SCHEMA:payment}
+    table: flyway_schema_history
+    create-schemas: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${DATABASE_SCHEMA:payment}
+        jdbc:
+          time_zone: UTC
+      jakarta.persistence.lock.timeout: ${PAYMENT_LOCK_TIMEOUT_MS:2000}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:59092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: payment-checkout
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: manual
+
+platform:
+  security:
+    issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8180/realms/ecommerce-local}
+    jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8180/realms/ecommerce-local/protocol/openid-connect/certs}
+    audience: payment-service
+
+payment:
+  messaging:
+    listener-enabled: ${PAYMENT_LISTENER_ENABLED:true}
+  outbox:
+    immediate-dispatch: ${PAYMENT_OUTBOX_IMMEDIATE_DISPATCH:true}
+    poll-delay: ${PAYMENT_OUTBOX_POLL_DELAY:2s}
+  simulator:
+    control-enabled: ${PAYMENT_SIMULATOR_CONTROL_ENABLED:false}
+    control-token: ${PAYMENT_SIMULATOR_CONTROL_TOKEN:}
+    charge-outcome: ${PAYMENT_SIMULATOR_CHARGE_OUTCOME:SUCCESS}
+    refund-outcome: ${PAYMENT_SIMULATOR_REFUND_OUTCOME:SUCCESS}
+    delay: ${PAYMENT_SIMULATOR_DELAY:2s}
+    due-poll-delay: ${PAYMENT_SIMULATOR_DUE_POLL_DELAY:1s}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never

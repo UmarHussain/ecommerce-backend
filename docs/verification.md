@@ -153,6 +153,57 @@ Executed from `/mnt/d/GitHub/ecommerce-local-platform` in WSL2 for Java, Maven, 
 
 Not executed: `make apps-up`. Checkout, reservations, payment, and Kafka were not implemented.
 
+## 2026-10-09 — Inventory checkout reservations
+
+Executed from Windows Git Bash for Surefire and from WSL2 for Failsafe. No project volumes were deleted. Docker was not available to Testcontainers in the Windows shell.
+
+- Windows `./mvnw -B -pl inventory-service verify`: Surefire passed, 13 tests (`InventoryServiceApplicationTests`, permission, catalog adapter, authority, reason code). Failsafe did not start: `Could not find a valid Docker environment`.
+- WSL2 `./mvnw -B -pl inventory-service failsafe:integration-test failsafe:verify`: `InventoryPostgresIT` 22 passed on Testcontainers PostgreSQL 17.6, including Flyway V1 and V2. `InventoryReservationIT` then failed on the outbox claim SQL (`20for`).
+- After the claim query was given a space before `for update`, WSL2 `./mvnw -B -pl inventory-service test-compile failsafe:integration-test failsafe:verify -Dit.test=InventoryReservationIT`: `InventoryReservationIT` 10 passed. Covered all-lines rollback, competing reserves, the reserved ceiling on an admin adjustment, duplicate command and a different event id, a changed payload hash, release-before-reserve, reserve-then-release, expiry versus hold, `CHECKOUT_HELD` ignored by expiry, consume once, restock once, and a `SENT` outbox row left unclaimed.
+
+Not executed: a broker round-trip, `make inventory-check`, or an order-service saga driving these topics.
+
+## 2026-10-09 — Checkout Compose and storefront
+
+Not a full Phase 5 gate. `InventoryReservationIT` was re-run in WSL2 after the assertion stopped requiring the outbox claim to contain only that test's row: 10 tests, 0 failures.
+
+- `make check`: passed after `cache-check.sh` and `cart-check.sh` were normalized from CRLF to LF. It validates the new checkout scripts and the Compose file with all profiles.
+- `bash scripts/local/compose.sh --profile apps --profile cache --profile events config --quiet`: passed.
+- `make backend-verify` in WSL2: BUILD SUCCESS in 10:27. Phase 5 results included inventory Surefire 13 plus `InventoryPostgresIT` 22 and `InventoryReservationIT` 10; cart Surefire 5 plus `CartPostgresIT` 8; order `SagaPolicyTest` 9, poison/outcome listener 2, and context 1; payment Surefire 11 plus `PaymentAttemptIT` 7. Earlier gateway (18), user (24 plus PostgreSQL 1), and catalog (30 plus Redis 6 and PostgreSQL 12) tests also passed. `UserServiceKeycloakIT` again reported 0 because the admin secret was not exported to that JVM.
+
+Not executed yet: `make checkout-check`, `make saga-check`, order/payment/cart saga Testcontainers tests, and a browser quote-to-order pass. `npm test` in `frontend` did not collect tests: storefront and admin `App.test.tsx` both failed in the existing setup file (`Vitest failed to find the current suite` at `afterEach`). That failure is not limited to the new checkout pages.
+
+## 2026-10-09 — Phase 5 live checkout and Saga checks
+
+Run against the debug Compose stack (`apps`, `cache`, `events`) with existing volumes kept; no volume was deleted or reset.
+
+- `npm test && npm run build` in `frontend` (Windows): storefront 5 files / 22 tests, admin 4 files / 16 tests, both builds passed. Both apps start Vitest through `scripts/run-vitest.mjs`, which canonicalizes the Windows drive letter so Vitest loads a single runtime.
+- WSL2 `./mvnw -B -pl order-service verify`: Surefire 12 (`SagaPolicyTest` 9, `OrderOutcomeListenerTest` 2, context 1) and `OrderCheckoutSagaIT` 13 on Testcontainers PostgreSQL 17.6, 0 failures. WSL2 `./mvnw -B -pl order-service,inventory-service test`: passed.
+- `make checkout-check`: passed. PKCE customer/staff tokens, unique stocked variant, persisted quote (amount, policy, address, line), single acceptance with completed replay and changed-payload conflict, owner isolation, order `CONFIRMED` only after simulated payment and stock consumption, then cart cleanup.
+- `make saga-check`: passed. A simulated decline released held stock (`onHand 3, reserved 0`) and ended `REJECTED`/`DECLINED`. Cancelling a confirmed order refunded, restocked, and ended `CANCELLED`/`REFUNDED` with `cancellationRequested=true`; a repeat cancel left the terminal result unchanged. The simulator was restored to `SUCCESS/SUCCESS`.
+
+Defects found only by the live run and fixed:
+
+- `backend/Dockerfile`: the build JDK image had no `unzip`, so the Maven wrapper fell back to a tarball and failed its ZIP checksum. `unzip` is installed; checksum validation stays on.
+- order-service Hibernate validation failed on `CHAR` columns; additive `V2__align_order_text_columns.sql` converts them to `VARCHAR`. Hibernate also emitted `order.customer_quote` unquoted; `hibernate.default_schema` is now `"order"` because `order` is a PostgreSQL keyword.
+- `GET /api/v1/orders/{id}`, `GET /api/v1/orders`, and cancel mapped lazy `lines`/`address` after the session closed (`open-in-view: false`) and returned 500. The owned-order query loads both, list is read-only transactional, and cancel reloads after the Saga transaction. `OrderCheckoutSagaIT` covers this. The catch-all handler now logs the exception with the correlation id.
+- inventory-service set `delivery.timeout.ms: 10000` without lowering `request.timeout.ms` (30 s default), so Kafka refused to construct the producer and every inventory outcome went `DEAD`. `request.timeout.ms: 5000` is set. Outbox send warnings in inventory and order now include the cause.
+- Cancelling a confirmed order did not set `cancellationRequested`, so a repeat cancel bypassed the already-cancelling guard. `SagaPolicyTest` covers the flag and the ignored repeat.
+
+Operational notes: Docker runs inside the Ubuntu WSL2 distro; when no WSL session is open the distro idles out and every project container stops (other containers with restart policies come back, these do not). Keep a WSL session open while the stack runs. After recreating a single service container, restart `api-gateway` if it returns `GATEWAY_DOWNSTREAM_UNAVAILABLE` for that service.
+
+## 2026-10-09 — Storefront browser checkout
+
+Storefront Vite on http://localhost:5173, signed in as `customer@example.test` through the Keycloak page (PKCE, `storefront-spa`). No password grant. The access token stays in memory, so the pass used in-app navigation after login.
+
+- Quote: Mechanical Keyboard - UK Layout, cart version 29, amount 109.00 USD, shipping 0.00 (`LOCAL_DEMO_FREE_SHIPPING`), tax 0.00 (`LOCAL_DEMO_TAX_NOT_CALCULATED`), saved address shown before placing the order.
+- Stock rejection: that order ended on screen as "Rejected. Nothing was charged." with payment `NOT_STARTED`. `order_history` detail is `stock unavailable`. The keyboard variant has no sellable stock.
+- Confirmed order: Phase Five checkout item, amount 12.50 USD, progress "Confirmed. The simulated payment and stock consumption both finished.", payment `SUCCEEDED`. Cancel stayed available.
+- Cancellation: the same confirmed order then showed "Cancelled after the required reversals were acknowledged." with payment `REFUNDED`.
+- Payment decline: simulator charge outcome set to `DECLINE` through the local control endpoint, then another 12.50 USD checkout. The order page showed "Rejected. Nothing was charged." and payment `DECLINED`. The simulator was restored to `SUCCESS`/`SUCCESS` (HTTP 204).
+
+Not executed: Kafka broker Testcontainers in the order integration suite (publisher uses a mocked `KafkaTemplate` there; `make checkout-check`, `make saga-check`, and this browser pass used the real broker).
+
 ## Still required
 
 - `make apps-up` + `make smoke` in container mode. The source-run path is what was verified, including the 2026-10-09 `make cart-check` and `make cache-check`.

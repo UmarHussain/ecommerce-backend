@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CartPage } from './CartPage'
 
@@ -58,14 +59,14 @@ describe('storefront cart', () => {
 
   it('asks an anonymous visitor to sign in', async () => {
     auth.isAuthenticated = false
-    render(<CartPage />)
+    render(<MemoryRouter><CartPage /></MemoryRouter>)
     expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument()
     expect(fetch).not.toHaveBeenCalled()
   })
 
   it('keeps a draft on conflict and drops the previous customer after an account switch', async () => {
     vi.mocked(fetch).mockResolvedValue(json(cartBody('Ada headphones')))
-    const view = render(<CartPage />)
+    const view = render(<MemoryRouter><CartPage /></MemoryRouter>)
     expect(await screen.findByText('Ada headphones')).toBeInTheDocument()
     expect(screen.getByText(/not rechecked/)).toBeInTheDocument()
 
@@ -85,7 +86,7 @@ describe('storefront cart', () => {
     auth.subject = 'customer-b'
     auth.token = 'token-b'
     vi.mocked(fetch).mockResolvedValue(json(cartBody('Grace book', 1, 0)))
-    view.rerender(<CartPage />)
+    view.rerender(<MemoryRouter><CartPage /></MemoryRouter>)
     expect(await screen.findByText('Grace book')).toBeInTheDocument()
     expect(screen.queryByText('Ada headphones')).not.toBeInTheDocument()
     const urls = vi.mocked(fetch).mock.calls.map(([url]) => String(url))

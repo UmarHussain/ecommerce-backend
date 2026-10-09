@@ -2,7 +2,7 @@
 
 ## Current state and assignment
 
-Phase 0 verified and Phases 1–3 implemented in this checkout. A later architecture refactor removed the two portal backends; browsers now call the gateway, which routes to the owning domain service. Do not restart Phase 1. Write-ups: [docs/phase-1.md](docs/phase-1.md), [docs/phase-2.md](docs/phase-2.md), and [docs/phase-3.md](docs/phase-3.md). Later phases remain roadmap.
+Phase 0 verified and Phases 1–4 implemented in this checkout. Phase 5 is accepted in this checkout. A later architecture refactor removed the two portal backends; browsers call the gateway, which routes to the owning domain service. Do not restart Phase 1. Write-ups: [docs/phase-1.md](docs/phase-1.md), [docs/phase-2.md](docs/phase-2.md), [docs/phase-3.md](docs/phase-3.md), [docs/phase-4.md](docs/phase-4.md), and [docs/phase-5.md](docs/phase-5.md). Phases 6–7 remain roadmap.
 
 The user explicitly authorized using the uploaded project to prepare this separate repository. Retain its catalog business implementation and tests; the original application outside this directory remains untouched.
 
@@ -60,6 +60,14 @@ Own carts, absolute quantities, aggregate versions, public catalog cache-aside, 
 ## Phase 5 — Checkout Saga
 
 Implement order state machine, durable coordinator, Kafka/outbox/inbox, reservation/consume/release/restock operations and payment simulator. Create payment-service only now. Demonstrate duplicate delivery, timeouts, late success, compensation, and restart recovery. No real payment provider.
+
+- [x] Publish Saga transition, compensation, topic, and envelope contracts.
+- [x] Persist owner-bound quotes, immutable order snapshots, and idempotent asynchronous acceptance.
+- [x] Implement transactional outbox/inbox recovery in order, inventory, payment, and cart services.
+- [x] Implement inventory reserve/hold/release/consume/restock and the durable local payment simulator.
+- [x] Implement cancellation, compensation, safe cart cleanup, gateway routes, and storefront progress.
+- [x] Add `checkout-check`, `saga-check`, Compose/start scripts, API examples, ADR, and failure guide.
+- [x] Pass full backend/frontend gates, both live Saga checks, and browser scenarios; record final evidence before declaring Phase 5 complete.
 
 ## Phase 6 — Fulfilment and admin dashboards
 

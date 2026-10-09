@@ -105,6 +105,56 @@ public class StockItem {
         this.onHand = nextOnHand;
     }
 
+    /**
+     * Increases reserved when available stock covers the quantity.
+     * Available is on-hand minus reserved.
+     */
+    public void reserve(int quantity) {
+        requirePositive(quantity);
+        int nextReserved = add(reserved, quantity);
+        if (nextReserved > onHand) {
+            throw new InventoryProblem(
+                    HttpStatus.CONFLICT,
+                    InventoryProblem.STOCK_INVARIANT,
+                    "Available stock is not sufficient"
+            );
+        }
+        this.reserved = nextReserved;
+    }
+
+    /** Decreases reserved only. On-hand stays where it is. */
+    public void releaseReserved(int quantity) {
+        requirePositive(quantity);
+        if (quantity > reserved) {
+            throw new InventoryProblem(
+                    HttpStatus.CONFLICT,
+                    InventoryProblem.STOCK_INVARIANT,
+                    "Reserved stock is not sufficient to release"
+            );
+        }
+        this.reserved = reserved - quantity;
+    }
+
+    /** Removes units from both on-hand and reserved after a held checkout. */
+    public void consumeReserved(int quantity) {
+        requirePositive(quantity);
+        if (quantity > reserved || quantity > onHand) {
+            throw new InventoryProblem(
+                    HttpStatus.CONFLICT,
+                    InventoryProblem.STOCK_INVARIANT,
+                    "Reserved stock is not sufficient to consume"
+            );
+        }
+        this.reserved = reserved - quantity;
+        this.onHand = onHand - quantity;
+    }
+
+    /** Puts consumed units back on hand. Reserved is unchanged. */
+    public void restock(int quantity) {
+        requirePositive(quantity);
+        this.onHand = add(onHand, quantity);
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
@@ -166,5 +216,27 @@ public class StockItem {
             return null;
         }
         return value.trim();
+    }
+
+    private static void requirePositive(int quantity) {
+        if (quantity <= 0) {
+            throw new InventoryProblem(
+                    HttpStatus.BAD_REQUEST,
+                    InventoryProblem.VALIDATION_FAILED,
+                    "Quantity must be greater than zero"
+            );
+        }
+    }
+
+    private static int add(int current, int quantity) {
+        try {
+            return Math.addExact(current, quantity);
+        } catch (ArithmeticException exception) {
+            throw new InventoryProblem(
+                    HttpStatus.BAD_REQUEST,
+                    InventoryProblem.QUANTITY_OVERFLOW,
+                    "The quantity overflows the stock range"
+            );
+        }
     }
 }

@@ -14,6 +14,10 @@ Implemented: catalog OpenAPI annotations and user-service OpenAPI. The gateway r
 | `PUT /api/v1/store/cart/items/{sku}` | `PERM_cart.write_own` | cart-service `PUT /api/v1/cart/items/{sku}` |
 | `DELETE /api/v1/store/cart/items/{sku}` | `PERM_cart.write_own` | cart-service, same item path; query `expectedVersion` is required |
 | `DELETE /api/v1/store/cart` | `PERM_cart.write_own` | cart-service `DELETE /api/v1/cart`; query `expectedVersion` is required |
+| `POST /api/v1/store/orders/quotes` | `PERM_order.create` | order-service `POST /api/v1/orders/quotes` |
+| `GET/POST /api/v1/store/orders` | `PERM_order.read_own` / `order.create` | order-service `/api/v1/orders` |
+| `GET /api/v1/store/orders/{id}` | `PERM_order.read_own` | order-service, same id under `/api/v1/orders` |
+| `POST /api/v1/store/orders/{id}/cancel` | `PERM_order.cancel_own` | order-service, same cancel path |
 | `GET/PATCH /api/v1/store/me` | `PERM_profile.read_own` / `update_own` | user-service `/api/v1/users/me` |
 | `POST /api/v1/store/me/addresses` and `PUT/DELETE .../{addressId}` | `PERM_profile.update_own` | user-service `/api/v1/users/me/addresses...` |
 | `GET /api/v1/admin/me` | `PERM_admin.access` | user-service. Profile is a JSON object, not a string |
@@ -100,4 +104,4 @@ Full behavior: [phase-3.md](../phase-3.md).
 
 Uncertain Keycloak outcomes return `202` with `Location: /api/v1/admin/operations/{id}`. Problem Details carry `code` and `correlationId`. JPA entities are not exposed.
 
-Future Kafka envelopes and Saga transitions are specified in MASTER_PROMPT.md; no event contracts are claimed implemented yet.
+Cart, quote, and order request and response bodies are in [cart-quote-order.md](../cart-quote-order.md). Checkout error and recovery behavior is in [phase-5.md](../phase-5.md). Kafka envelope and participant contracts are in [checkout-events.md](../checkout-events.md), and the state table is [checkout-transitions.md](../checkout-transitions.md).

@@ -16,7 +16,8 @@ public class Routes {
             @Value("${USER_SERVICE_URL:http://localhost:8093}") String users,
             @Value("${CATALOG_SERVICE_URL:http://localhost:8094}") String catalog,
             @Value("${INVENTORY_SERVICE_URL:http://localhost:8095}") String inventory,
-            @Value("${CART_SERVICE_URL:http://localhost:8096}") String cart
+            @Value("${CART_SERVICE_URL:http://localhost:8096}") String cart,
+            @Value("${ORDER_SERVICE_URL:http://localhost:8097}") String orders
     ) {
         return builder.routes()
                 .route("public-catalog-product-slug", route -> route
@@ -73,6 +74,32 @@ public class Routes {
                         .and().method("GET", "DELETE")
                         .filters(filter -> filter.rewritePath("/api/v1/store/cart", "/api/v1/cart"))
                         .uri(cart))
+                .route("customer-order-cancel", route -> route
+                        .path("/api/v1/store/orders/{orderId}/cancel")
+                        .and().method("POST")
+                        .filters(filter -> filter.rewritePath(
+                                "/api/v1/store/orders/(?<orderId>[^/]+)/cancel",
+                                "/api/v1/orders/${orderId}/cancel"))
+                        .uri(orders))
+                .route("customer-order-quotes", route -> route
+                        .path("/api/v1/store/orders/quotes")
+                        .and().method("POST")
+                        .filters(filter -> filter.rewritePath(
+                                "/api/v1/store/orders/quotes",
+                                "/api/v1/orders/quotes"))
+                        .uri(orders))
+                .route("customer-order", route -> route
+                        .path("/api/v1/store/orders/{orderId}")
+                        .and().method("GET")
+                        .filters(filter -> filter.rewritePath(
+                                "/api/v1/store/orders/(?<orderId>[^/]+)",
+                                "/api/v1/orders/${orderId}"))
+                        .uri(orders))
+                .route("customer-orders", route -> route
+                        .path("/api/v1/store/orders")
+                        .and().method("GET", "POST")
+                        .filters(filter -> filter.rewritePath("/api/v1/store/orders", "/api/v1/orders"))
+                        .uri(orders))
                 .route("customer-me", route -> route
                         .path("/api/v1/store/me")
                         .and().method("GET", "PATCH")

@@ -36,6 +36,27 @@ spring:
         default_schema: ${DATABASE_SCHEMA:inventory}
         jdbc:
           time_zone: UTC
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:59092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        # Kafka rejects the producer unless delivery.timeout.ms >= linger.ms + request.timeout.ms.
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+        max.block.ms: 5000
+    consumer:
+      group-id: inventory-checkout
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: manual_immediate
 
 platform:
   security:
@@ -78,6 +99,23 @@ resilience4j:
         ignoreExceptions:
           - io.github.resilience4j.circuitbreaker.CallNotPermittedException
           - com.umar.ecommerce.inventory.exception.InventoryProblem
+
+inventory:
+  reservation:
+    pre-payment-ttl: ${INVENTORY_PRE_PAYMENT_TTL:2m}
+  workers:
+    enabled: true
+  expiry:
+    poll-delay-ms: 1000
+    batch-size: 20
+  outbox:
+    poll-delay-ms: 1000
+    lease: 30s
+    batch-size: 20
+    send-timeout: 10s
+  messaging:
+    listener-enabled: true
+    dispatch-enabled: true
 
 management:
   health:

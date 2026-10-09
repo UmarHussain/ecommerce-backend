@@ -27,6 +27,7 @@ public final class AccessTokenRules {
     private static final String RETIRED_PORTAL_CLIENT = "admin-portal-backend";
     private static final Set<String> PROFILE_PERMISSIONS = Set.of("profile.read_own", "profile.update_own");
     private static final Set<String> CART_PERMISSIONS = Set.of("cart.read_own", "cart.write_own");
+    private static final Set<String> ORDER_PERMISSIONS = Set.of("order.create", "order.read_own", "order.cancel_own");
 
     private AccessTokenRules() {
     }
@@ -49,6 +50,7 @@ public final class AccessTokenRules {
         }
         addRoles(result, resources, "user-service", PROFILE_PERMISSIONS);
         addRoles(result, resources, "cart-service", CART_PERMISSIONS);
+        addRoles(result, resources, "order-service", ORDER_PERMISSIONS);
         if (hasRole(resources, AUDIENCE, PORTAL_ENTRY) || hasRole(resources, RETIRED_PORTAL_CLIENT, PORTAL_ENTRY)) {
             result.add(new SimpleGrantedAuthority("PERM_" + PORTAL_ENTRY));
         }

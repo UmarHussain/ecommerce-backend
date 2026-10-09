@@ -98,6 +98,7 @@ services:
       CATALOG_SERVICE_URL: http://catalog-service:8094
       INVENTORY_SERVICE_URL: http://inventory-service:8095
       CART_SERVICE_URL: http://cart-service:8096
+      ORDER_SERVICE_URL: http://order-service:8097
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,6 +109,10 @@ services:
       catalog-service:
         condition: service_started
       inventory-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      order-service:
         condition: service_started
     mem_limit: 512m
     ports:
@@ -181,6 +186,7 @@ services:
       DATABASE_PASSWORD: ${INVENTORY_DB_PASSWORD:?Run make bootstrap}
       DATABASE_SCHEMA: inventory
       CATALOG_SERVICE_URL: http://catalog-service:8094
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: local
     depends_on:
       postgres:
@@ -190,6 +196,7 @@ services:
     mem_limit: 512m
   cart-service:
     profiles:
+    - apps
     - later
     build:
       context: ../../backend
@@ -205,6 +212,7 @@ services:
       DATABASE_PASSWORD: ${CART_DB_PASSWORD:?Run make bootstrap}
       DATABASE_SCHEMA: cart
       CATALOG_SERVICE_URL: http://catalog-service:8094
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: local
     depends_on:
       postgres:
@@ -214,6 +222,7 @@ services:
     mem_limit: 512m
   order-service:
     profiles:
+    - apps
     - later
     build:
       context: ../../backend
@@ -224,6 +233,42 @@ services:
       SERVER_PORT: '8097'
       OIDC_ISSUER_URI: http://localhost:8180/realms/ecommerce-local
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/ecommerce-local/protocol/openid-connect/certs
+      DATABASE_URL: jdbc:postgresql://postgres:5432/orderdb
+      DATABASE_USERNAME: order_app
+      DATABASE_PASSWORD: ${ORDER_DB_PASSWORD:?Run make bootstrap}
+      DATABASE_SCHEMA: order
+      USER_SERVICE_URL: http://user-service:8093
+      CATALOG_SERVICE_URL: http://catalog-service:8094
+      CART_SERVICE_URL: http://cart-service:8096
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_PROFILES_ACTIVE: local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    mem_limit: 512m
+  payment-service:
+    profiles:
+    - apps
+    - later
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: payment-service
+    environment:
+      SERVER_PORT: '8098'
+      OIDC_ISSUER_URI: http://localhost:8180/realms/ecommerce-local
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/ecommerce-local/protocol/openid-connect/certs
+      DATABASE_URL: jdbc:postgresql://postgres:5432/paymentdb
+      DATABASE_USERNAME: payment_app
+      DATABASE_PASSWORD: ${PAYMENT_DB_PASSWORD:?Run make bootstrap}
+      DATABASE_SCHEMA: payment
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_PROFILES_ACTIVE: local
+      PAYMENT_SIMULATOR_CONTROL_ENABLED: ${PAYMENT_SIMULATOR_CONTROL_ENABLED:-false}
+      PAYMENT_SIMULATOR_CONTROL_TOKEN: ${PAYMENT_SIMULATOR_CONTROL_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

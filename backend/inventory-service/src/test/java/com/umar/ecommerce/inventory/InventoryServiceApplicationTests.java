@@ -6,6 +6,7 @@ import com.umar.ecommerce.inventory.repository.StockItemRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -17,7 +18,11 @@ import org.springframework.transaction.PlatformTransactionManager;
                 + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration,"
-                + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
+                + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration,"
+                + "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration",
+        "inventory.workers.enabled=false",
+        "inventory.messaging.listener-enabled=false",
+        "inventory.messaging.dispatch-enabled=false"
 })
 class InventoryServiceApplicationTests {
 
@@ -31,6 +36,8 @@ class InventoryServiceApplicationTests {
     private EntityManager entityManager;
     @MockitoBean
     private PlatformTransactionManager platformTransactionManager;
+    @MockitoBean
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     @Test
     void contextLoads() {

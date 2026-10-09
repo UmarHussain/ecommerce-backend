@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from 'react-oidc-context'
+import { Link } from 'react-router-dom'
 import { clearCart, getCart, removeItem, setQuantity, type Cart } from '../api/cart'
 import { ApiError } from '../api/client'
 
@@ -155,6 +156,7 @@ export function CartPage() {
           <button type="button" disabled={pending} onClick={() => void run(() => clearCart(token, cart.version))}>
             Clear cart
           </button>
+          <p><Link to="/checkout">Review checkout</Link></p>
         </>
       ) : null}
     </main>

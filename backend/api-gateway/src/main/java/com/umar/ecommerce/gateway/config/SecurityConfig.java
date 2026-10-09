@@ -38,6 +38,11 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.PUT, "/api/v1/store/cart/items/**").hasAuthority("PERM_cart.write_own")
                         .pathMatchers(HttpMethod.DELETE, "/api/v1/store/cart/items/**").hasAuthority("PERM_cart.write_own")
                         .pathMatchers(HttpMethod.DELETE, "/api/v1/store/cart").hasAuthority("PERM_cart.write_own")
+                        .pathMatchers(HttpMethod.POST, "/api/v1/store/orders/quotes").hasAuthority("PERM_order.create")
+                        .pathMatchers(HttpMethod.POST, "/api/v1/store/orders").hasAuthority("PERM_order.create")
+                        .pathMatchers(HttpMethod.GET, "/api/v1/store/orders").hasAuthority("PERM_order.read_own")
+                        .pathMatchers(HttpMethod.GET, "/api/v1/store/orders/*").hasAuthority("PERM_order.read_own")
+                        .pathMatchers(HttpMethod.POST, "/api/v1/store/orders/*/cancel").hasAuthority("PERM_order.cancel_own")
                         .pathMatchers("/api/v1/admin/**").hasAuthority("PERM_admin.access")
                         .anyExchange().denyAll())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(

@@ -37,6 +37,22 @@ spring:
         jdbc:
           time_zone: UTC
       jakarta.persistence.lock.timeout: ${CART_LOCK_TIMEOUT_MS:2000}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:59092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: cart-checkout
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: manual
+
+cart:
+  outbox:
+    poll-delay: ${CART_OUTBOX_POLL_DELAY:2000}
 
 platform:
   security:
